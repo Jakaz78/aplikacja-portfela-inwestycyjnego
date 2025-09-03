@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Portfolio{% endblock %}
+
+{% block content %}
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }} alert-dismissible mt-3 fade show" role="alert">
+          {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+
+przez tego diva jest nierowno gora
+<div>
+{% if data %}
+    <table border="1">
+        <thead>
+            <tr>
+                {% for col in data[0].keys() %}
+                    <th>{{ col }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data %}
+                                   {% for value in row.values() %}
+                        <td>{{ value }}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>Brak danych do wyświetlenia.</p>
+{% endif %}
+    </div>
+</br>
+<div style="display: flex; flex-direction: column; align-items: flex-start;">
+    <form method="POST" action="/import_csv" enctype="multipart/form-data">
+        <input type="file" name="csv_file" accept=".csv" required class="form-control" style="margin-bottom: 12px;">
+        <button type="submit" class="btn-accent">Importuj CSV</button>
+    </form>
+</div>
+{% endblock %}

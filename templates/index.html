@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="text-center" style="margin-top: 80px;">
+    <!-- Logo i tytuł na bazie Twojego MainMenu -->
+    <div class="mb-5">
+<div style="width: fit-content; margin: 0 auto 24px;">
+    <img src="{{ url_for('static', filename='images/small-logo.svg') }}"
+         alt="Logo aplikacji"
+         style="max-width: 100%; height: auto; border-radius: 16px;">
+</div>
+        <h1 style="font-size: 2.5rem; font-weight: bold; margin-bottom: 12px;">Aplikacja Finansowa</h1>
+        <p style="font-size: 1.2rem; color: var(--muted);">Zarządzanie portfelem i analizy</p>
+    </div>
+
+    <!-- Menu przycisków -->
+    <div class="d-flex flex-column align-items-center gap-3" style="max-width: 300px; margin: 0 auto;">
+        <a class="btn btn-accent w-100 py-3" href="{{ url_for('portfolio') }}">
+            📊 Portfel obligacji
+        </a>
+        <a class="btn btn-secondary w-100 py-3">
+            📁 Importuj CSV
+        </a>
+        <a class="btn btn-secondary w-100 py-3">
+            ➕ Dodaj obligację
+        </a>
+        <a class="btn btn-secondary w-100 py-3" href="{{ url_for('settings') }}">
+            ⚙️ Ustawienia
+        </a>
+    </div>
+
+    <!-- Stopka -->
+
+
+
+</div>
+{% endblock %}

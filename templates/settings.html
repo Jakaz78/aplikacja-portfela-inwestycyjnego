@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Ustawienia{% endblock %}
+
+
+{% block content %}
+<div class="card">
+    <div class="card-header">Ustawienia aplikacji</div>
+    <div class="card-body">
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="mb-3">
+              {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                  {{ message }}
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        <form method="POST">
+            <!-- WYGLĄD -->
+            <div class="mb-4">
+                <h5 class="form-label">🎨 Wygląd</h5>
+                <label for="theme" class="form-label">Motyw:</label>
+                <select name="theme" id="theme" class="form-control" required>
+                    {% for theme in themes %}
+                        <option value="{{ theme }}" {% if settings.theme == theme %}selected{% endif %}>{{ theme }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- JĘZYK -->
+            <div class="mb-4">
+                <h5 class="form-label">🌐 Język</h5>
+                <label for="language" class="form-label">Język:</label>
+                <select name="language" id="language" class="form-control" required>
+                    {% for lang in languages %}
+                        <option value="{{ lang }}" {% if settings.language == lang %}selected{% endif %}>{{ lang }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+
+            <!-- PRZYCISKI -->
+            <div class="d-flex gap-3">
+                <button type="submit" name="action" value="save" class="btn btn-accent">Zapisz ustawienia</button>
+                <button type="submit" name="action" value="reset" class="btn btn-secondary">Resetuj do domyślnych</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

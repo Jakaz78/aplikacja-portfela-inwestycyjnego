@@ -1,0 +1,180 @@
+/* Kolory z Twojego styles.py */
+:root {
+    --bg: #0f1216;
+    --top-bg: #121821;
+    --panel: #141922;
+    --header: #1b2431;
+    --text: #e8edf3;
+    --muted: #a7b4c5;
+    --accent: #8fa2ff;
+    --accent-hover: #9fb0ff;
+    --secondary: #23304b;
+    --row-odd: #121821;
+    --row-even: #0f141c;
+    --row-hover: #1a2433;
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+.topbar {
+    background-color: var(--top-bg);
+    padding: 12px 0;
+    border-bottom: 1px solid var(--panel);
+}
+
+.topbar-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+}
+
+.logo-wrap {
+    display: flex;
+    align-items: center;
+}
+
+.logo {
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(45deg, #7c9cff, #4cc38a);
+    border-radius: 6px;
+    margin-right: 12px;
+}
+
+.logo-text {
+    font-size: 16px;
+    font-weight: bold;
+    color: var(--text);
+}
+
+.main-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    min-height: calc(100vh - 150px);
+}
+
+.card {
+    background-color: var(--panel);
+    border: 1px solid var(--header);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.card-header {
+    background-color: var(--header);
+    padding: 16px 20px;
+    font-weight: bold;
+    font-size: 14px;
+    color: #d7e2f1;
+}
+
+.btn-accent {
+    background-color: var(--accent);
+    border: none;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-weight: 500;
+    text-decoration: none;
+    display: inline-block;
+    transition: background-color 0.2s;
+}
+
+.btn-accent:hover {
+    background-color: var(--accent-hover);
+    color: white;
+}
+
+.btn-secondary {
+    background-color: var(--secondary);
+    border: none;
+    color: #c7d2e5;
+    padding: 10px 18px;
+    border-radius: 6px;
+    text-decoration: none;
+    display: inline-block;
+    margin: 0 4px;
+    transition: background-color 0.2s;
+}
+
+.btn-secondary:hover {
+    background-color: #2b3a5d;
+    color: #c7d2e5;
+}
+
+.table-dark {
+    background-color: var(--panel);
+    color: var(--text);
+}
+
+.table-dark th {
+    background-color: var(--header);
+    border-color: var(--secondary);
+}
+
+.table-dark td {
+    border-color: var(--secondary);
+}
+
+.table tbody tr:nth-child(odd) {
+    background-color: var(--row-odd);
+}
+
+.table tbody tr:nth-child(even) {
+    background-color: var(--row-even);
+}
+
+.table tbody tr:hover {
+    background-color: var(--row-hover) !important;
+}
+
+/* Formularze */
+.form-control {
+    background-color: var(--panel);
+    border: 1px solid var(--secondary);
+    color: var(--text);
+}
+
+.form-control:focus {
+    background-color: var(--panel);
+    border-color: var(--accent);
+    color: var(--text);
+    box-shadow: 0 0 0 0.2rem rgba(143, 162, 255, 0.25);
+}
+
+.form-label {
+    color: var(--text);
+    font-weight: 500;
+}
+
+/* Stats cards */
+.stats-card {
+    background: linear-gradient(135deg, var(--accent), #6b8cff);
+    color: white;
+    padding: 24px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.stats-card h3 {
+    margin: 0;
+    font-size: 2.2rem;
+    font-weight: bold;
+}
+
+.stats-card h5 {
+    margin: 0 0 8px 0;
+    opacity: 0.9;
+    font-weight: 500;
+}
+
