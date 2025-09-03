@@ -18,20 +18,37 @@
 
 przez tego diva jest nierowno gora
 <div>
-{% if data %}
+{% if obligacje %}
     <table border="1">
         <thead>
             <tr>
-                {% for col in data[0].keys() %}
-                    <th>{{ col }}</th>
-                {% endfor %}
+                <th>Data zakupu</th>
+                <th>Seria</th>
+                <th>Typ</th>
+                <th>Wartość nominalna</th>
+                <th>Cena zakupu</th>
+                <th>Data emisji </th>
+                <th>Data wykupu</th>
+                <th>Oprocentowanie</th>
+                <th>Aktualna wartość</th>
+                <th>Kod ISIN</th>
+                <th>Numer transakcji</th>
             </tr>
         </thead>
         <tbody>
-            {% for row in data %}
-                                   {% for value in row.values() %}
-                        <td>{{ value }}</td>
-                    {% endfor %}
+            {% for obl in obligacje %}
+                <tr>
+                    <td>{{ obl.data_zakupu }}</td>
+                    <td>{{ obl.seria_obligacji }}</td>
+                    <td>{{ obl.typ_obligacji }}</td>
+                    <td>{{ obl.wartosc_nominalna }}</td>
+                    <td>{{ obl.cena_zakupu }}</td>
+                    <td>{{ obl.data_emisji }}</td>
+                    <td>{{ obl.data_wykupu }}</td>
+                    <td>{{ obl.oprocentowanie }}</td>
+                    <td>{{ obl.aktualna_wartosc }}</td>
+                    <td>{{ obl.kod_ISIN }}</td>
+                    <td>{{ obl.numer_transakcji }}</td>
                 </tr>
             {% endfor %}
         </tbody>
@@ -39,7 +56,8 @@ przez tego diva jest nierowno gora
 {% else %}
     <p>Brak danych do wyświetlenia.</p>
 {% endif %}
-    </div>
+</div>
+
 </br>
 <div style="display: flex; flex-direction: column; align-items: flex-start;">
     <form method="POST" action="/import_csv" enctype="multipart/form-data">

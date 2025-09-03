@@ -1,6 +1,7 @@
 from flask import Flask
 from .config import Config
 
+
 def create_app(config_class=Config):
     # instance_relative_config — pozwala używać instance/ jako katalogu danych
     app = Flask(__name__, instance_relative_config=True)

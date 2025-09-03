@@ -2,12 +2,29 @@ import pandas as pd
 from flask import render_template, flash, redirect, request
 from . import bp
 from ...services.csv_service import read_previous_df, append_and_save
-
+from ...models.bond import Bond
 @bp.get("/")
 def portfolio():
     df = read_previous_df()
-    data = df.to_dict(orient="records") if not df.empty else []
-    return render_template("portfolio.html", data=data)
+    obligacje = []
+    if not df.empty:
+        for _, row in df.iterrows():
+            obligacja = Bond(
+                data_zakupu=row.get("Data_Zakupu"),
+                seria_obligacji=row.get("Seria_Obligacji"),
+                typ_obligacji=row.get("Typ_Obligacji"),
+                wartosc_nominalna=row.get("Wartosc_Nominalna"),
+                cena_zakupu=row.get("Cena_Zakupu"),
+                data_emisji=row.get("Data_Emisji"),
+                data_wykupu=row.get("Data_Wykupu"),
+                oprocentowanie=row.get("Oprocentowanie"),
+                aktualna_wartosc=row.get("Aktualna_Wartosc"),
+                kod_ISIN=row.get("Kod_ISIN"),
+                numer_transakcji=row.get("Numer_Transakcji"),
+            )
+            obligacje.append(obligacja)
+    return render_template("portfolio.html", obligacje=obligacje)
+
 
 @bp.post("/import_csv")
 def import_csv():
