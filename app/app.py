@@ -56,6 +56,15 @@ def portfolio():
         data = []
 
     return render_template('portfolio.html', data=data)
+@app.route('/portfolio_analiza')
+def portfolio_analysis():
+    previous_path = os.path.join('data', 'previous.csv')
+    if os.path.exists(previous_path):
+        df = pd.read_csv(previous_path)
+        data = df.to_dict(orient='records')
+    else:
+        data = []
+    return render_template('portfolio_analysis.html', data=data)
 
 
 

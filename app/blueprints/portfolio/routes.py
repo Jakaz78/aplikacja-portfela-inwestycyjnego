@@ -3,6 +3,7 @@ from flask import render_template, flash, redirect, request
 from . import bp
 from ...services.csv_service import read_previous_df, append_and_save
 from ...models.bond import Bond
+import os
 @bp.get("/")
 def portfolio():
     df = read_previous_df()
@@ -24,6 +25,15 @@ def portfolio():
             )
             obligacje.append(obligacja)
     return render_template("portfolio.html", obligacje=obligacje)
+@bp.get("/analiza")
+def portfolio_analysis():
+    previous_path = os.path.join("data", "previous.csv")
+    if os.path.exists(previous_path):
+        df = pd.read_csv(previous_path)
+        data = df.to_dict(orient="records")
+    else:
+        data = []
+    return render_template("portfolio_analysis.html", data=data)
 
 
 @bp.post("/import_csv")
