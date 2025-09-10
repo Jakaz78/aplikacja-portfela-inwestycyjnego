@@ -4,6 +4,7 @@ from . import bp
 from ...services.csv_service import read_previous_df, append_and_save
 from ...models.bond import Bond
 import os
+from ...services.charts_service import build_current_value_timeseries, render_current_value_png
 @bp.get("/")
 def portfolio():
     df = read_previous_df()
@@ -27,13 +28,16 @@ def portfolio():
     return render_template("portfolio.html", obligacje=obligacje)
 @bp.get("/analiza")
 def portfolio_analysis():
-    previous_path = os.path.join("data", "previous.csv")
-    if os.path.exists(previous_path):
-        df = pd.read_csv(previous_path)
-        data = df.to_dict(orient="records")
-    else:
-        data = []
-    return render_template("portfolio_analysis.html", data=data)
+    df = read_previous_df()
+    timeseries = build_current_value_timeseries(df)
+    return render_template("portfolio_analysis.html", timeseries=timeseries)
+
+@bp.get("/analiza/chart.png")
+def portfolio_analysis_chart_png():
+    df = read_previous_df()
+    png_bytes = render_current_value_png(df, width_px=900, height_px=400)
+    from flask import Response
+    return Response(png_bytes, mimetype='image/png')
 
 
 @bp.post("/import_csv")

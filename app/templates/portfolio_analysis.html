@@ -4,5 +4,142 @@
 
 
 {% block content %}
-analiza
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">Wzrost wartości portfela obligacji w czasie</h2>
+        <div class="d-flex align-items-center gap-2">
+            <label for="period" class="me-2 mb-0" style="color:#5a6b7d;">Skala:</label>
+            <select id="period" class="form-select form-select-sm" style="width: 220px;">
+                <option value="day" selected>Dzień</option>
+                <option value="week">Tydzień</option>
+                <option value="month">Miesiąc</option>
+                <option value="quarter">3 miesiące</option>
+            </select>
+        </div>
+    </div>
+
+    <div style="width: 100%; max-width: 1100px; height: 48vh; min-height: 320px; margin: 0 auto;">
+        <canvas id="valueChart"></canvas>
+    </div>
+    {% if not timeseries.labels %}
+    <div class="alert alert-info mt-3">Brak danych do wyświetlenia. Zaimportuj plik CSV w zakładce Portfolio.</div>
+    {% endif %}
+</div>
+
+<script id="ts-data" type="application/json">{{ timeseries | tojson }}</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+    (function () {
+        const raw = document.getElementById('ts-data').textContent;
+        let ts = { labels: [], values: [] };
+        try { ts = JSON.parse(raw); } catch (e) {}
+        if (!(ts && ts.labels && ts.labels.length)) return;
+
+        const parseDate = (s) => new Date(s);
+
+        // Prepare base daily data as [{date, value}] with Date objects
+        const base = ts.labels.map((d, i) => ({ date: parseDate(d), value: Number(ts.values[i]) }))
+                              .filter(p => !isNaN(p.date.getTime()) && isFinite(p.value))
+                              .sort((a,b) => a.date - b.date);
+
+        function keyWeek(date){
+            const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            const dayNum = d.getUTCDay() || 7; // 1-7 (Mon-Sun)
+            d.setUTCDate(d.getUTCDate() + (4 - dayNum));
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+            const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+            return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2,'0')}`;
+        }
+
+        function keyMonth(date){
+            return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
+        }
+
+        function keyQuarter(date){
+            const q = Math.floor(date.getMonth()/3) + 1; // 1..4
+            // Group by rolling 3-month periods (calendar quarters are OK for 3M)
+            return `${date.getFullYear()}-Q${q}`;
+        }
+
+        function resample(period){
+            if (period === 'day'){
+                return {
+                    labels: base.map(p => p.date.toISOString().slice(0,10)),
+                    values: base.map(p => p.value)
+                };
+            }
+            const bucket = new Map(); // key -> last point of bucket
+            const order = [];
+            for (const p of base){
+                let k;
+                if (period === 'week') k = keyWeek(p.date);
+                else if (period === 'month') k = keyMonth(p.date);
+                else if (period === 'quarter') k = keyQuarter(p.date);
+                if (!bucket.has(k)) order.push(k);
+                bucket.set(k, p); // keep last (latest) value in the bucket
+            }
+            const labels = [];
+            const values = [];
+            for (const k of order){
+                const p = bucket.get(k);
+                if (!p) continue;
+                if (period === 'week') labels.push(k); // e.g., 2025-W09
+                else if (period === 'month') labels.push(k); // e.g., 2025-09
+                else if (period === 'quarter') labels.push(k); // e.g., 2025-Q3
+                values.push(p.value);
+            }
+            return { labels, values };
+        }
+
+        const canvas = document.getElementById('valueChart');
+        const ctx = canvas.getContext('2d');
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, 'rgba(13, 110, 253, 0.25)');
+        gradient.addColorStop(1, 'rgba(13, 110, 253, 0.00)');
+
+        const formatterPLN = (v) => new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(v);
+
+        const initial = resample('day');
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: initial.labels,
+                datasets: [{
+                    label: 'Łączna aktualna wartość (PLN)',
+                    data: initial.values,
+                    borderColor: '#0d6efd',
+                    backgroundColor: gradient,
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 2,
+                    pointHoverRadius: 6,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                animation: { duration: 400, easing: 'easeOutQuart' },
+                layout: { padding: { left: 8, right: 16, top: 8, bottom: 8 } },
+                elements: { line: { borderWidth: 2 }, point: { hitRadius: 12 } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } },
+                    y: { beginAtZero: false, grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { callback: formatterPLN } }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: true, intersect: false, mode: 'index', callbacks: { label: (ctx) => ` ${formatterPLN(ctx.parsed.y)}` } }
+                }
+            }
+        });
+
+        document.getElementById('period').addEventListener('change', (e) => {
+            const period = e.target.value;
+            const next = resample(period);
+            chart.data.labels = next.labels;
+            chart.data.datasets[0].data = next.values;
+            chart.update();
+        });
+    })();
+</script>
 {% endblock %}
