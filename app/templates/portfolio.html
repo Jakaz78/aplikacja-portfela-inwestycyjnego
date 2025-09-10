@@ -60,7 +60,7 @@ przez tego diva jest nierowno gora
 
 </br>
 <div style="display: flex; flex-direction: column; align-items: flex-start;">
-    <form method="POST" action="/import_csv" enctype="multipart/form-data">
+    <form method="POST" action="{{ url_for('portfolio.import_csv') }}" enctype="multipart/form-data">
         <input type="file" name="csv_file" accept=".csv" required class="form-control" style="margin-bottom: 12px;">
         <button type="submit" class="btn-accent">Importuj CSV</button>
     </form>
