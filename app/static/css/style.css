@@ -178,3 +178,21 @@ body {
     font-weight: 500;
 }
 
+
+
+/* Pasek akcentowy full-bleed używany tylko tam, gdzie występuje w HTML (tu: portfolio.html) */
+.under-bar {
+  position: relative;
+
+  margin: -10 auto;
+  padding: -20px
+  width: calc(100vw);                 /* w tym wzorcu 100vw jest OK */
+  max-width: 100vw;
+  height: 30px;
+  background: linear-gradient(90deg, var(--accent), #6b8cff);
+  pointer-events: none;
+}
+
+.main-container > .under-bar {
+  margin-top: -20px;  /* kompensuje padding-top: 20px kontenera */
+}
