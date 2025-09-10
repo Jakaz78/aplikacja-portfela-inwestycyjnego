@@ -1,30 +1,27 @@
-{% extends "base.html" %}
+{% extends "portfolio_base.html" %}
 
-{% block title %}Analiza{% endblock %}
+{% block portfolio_title %}Analiza{% endblock %}
 
-
-{% block content %}
-<div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="mb-0">Wzrost wartości portfela obligacji w czasie</h2>
-        <div class="d-flex align-items-center gap-2">
-            <label for="period" class="me-2 mb-0" style="color:#5a6b7d;">Skala:</label>
-            <select id="period" class="form-select form-select-sm" style="width: 220px;">
-                <option value="day" selected>Dzień</option>
-                <option value="week">Tydzień</option>
-                <option value="month">Miesiąc</option>
-                <option value="quarter">3 miesiące</option>
-            </select>
-        </div>
+{% block portfolio_content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Wzrost wartości portfela obligacji w czasie</h2>
+    <div class="d-flex align-items-center gap-2">
+        <label for="period" class="me-2 mb-0" style="color:#5a6b7d;">Skala:</label>
+        <select id="period" class="form-select form-select-sm" style="width: 220px;">
+            <option value="day" selected>Dzień</option>
+            <option value="week">Tydzień</option>
+            <option value="month">Miesiąc</option>
+            <option value="quarter">3 miesiące</option>
+        </select>
     </div>
-
-    <div style="width: 100%; max-width: 1100px; height: 48vh; min-height: 320px; margin: 0 auto;">
-        <canvas id="valueChart"></canvas>
-    </div>
-    {% if not timeseries.labels %}
-    <div class="alert alert-info mt-3">Brak danych do wyświetlenia. Zaimportuj plik CSV w zakładce Portfolio.</div>
-    {% endif %}
 </div>
+
+<div style="width: 100%; max-width: 1100px; height: 48vh; min-height: 320px; margin: 0 auto;">
+    <canvas id="valueChart"></canvas>
+</div>
+{% if not timeseries.labels %}
+<div class="alert alert-info mt-3">Brak danych do wyświetlenia. Zaimportuj plik CSV w zakładce Portfolio.</div>
+{% endif %}
 
 <script id="ts-data" type="application/json">{{ timeseries | tojson }}</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -36,39 +33,26 @@
         if (!(ts && ts.labels && ts.labels.length)) return;
 
         const parseDate = (s) => new Date(s);
-
-        // Prepare base daily data as [{date, value}] with Date objects
         const base = ts.labels.map((d, i) => ({ date: parseDate(d), value: Number(ts.values[i]) }))
                               .filter(p => !isNaN(p.date.getTime()) && isFinite(p.value))
                               .sort((a,b) => a.date - b.date);
 
         function keyWeek(date){
             const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-            const dayNum = d.getUTCDay() || 7; // 1-7 (Mon-Sun)
+            const dayNum = d.getUTCDay() || 7;
             d.setUTCDate(d.getUTCDate() + (4 - dayNum));
             const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
             const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
             return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2,'0')}`;
         }
-
-        function keyMonth(date){
-            return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
-        }
-
-        function keyQuarter(date){
-            const q = Math.floor(date.getMonth()/3) + 1; // 1..4
-            // Group by rolling 3-month periods (calendar quarters are OK for 3M)
-            return `${date.getFullYear()}-Q${q}`;
-        }
+        function keyMonth(date){ return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`; }
+        function keyQuarter(date){ const q = Math.floor(date.getMonth()/3) + 1; return `${date.getFullYear()}-Q${q}`; }
 
         function resample(period){
             if (period === 'day'){
-                return {
-                    labels: base.map(p => p.date.toISOString().slice(0,10)),
-                    values: base.map(p => p.value)
-                };
+                return { labels: base.map(p => p.date.toISOString().slice(0,10)), values: base.map(p => p.value) };
             }
-            const bucket = new Map(); // key -> last point of bucket
+            const bucket = new Map();
             const order = [];
             for (const p of base){
                 let k;
@@ -76,16 +60,14 @@
                 else if (period === 'month') k = keyMonth(p.date);
                 else if (period === 'quarter') k = keyQuarter(p.date);
                 if (!bucket.has(k)) order.push(k);
-                bucket.set(k, p); // keep last (latest) value in the bucket
+                bucket.set(k, p);
             }
             const labels = [];
             const values = [];
             for (const k of order){
                 const p = bucket.get(k);
                 if (!p) continue;
-                if (period === 'week') labels.push(k); // e.g., 2025-W09
-                else if (period === 'month') labels.push(k); // e.g., 2025-09
-                else if (period === 'quarter') labels.push(k); // e.g., 2025-Q3
+                labels.push(k);
                 values.push(p.value);
             }
             return { labels, values };
@@ -96,7 +78,6 @@
         const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
         gradient.addColorStop(0, 'rgba(13, 110, 253, 0.25)');
         gradient.addColorStop(1, 'rgba(13, 110, 253, 0.00)');
-
         const formatterPLN = (v) => new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(v);
 
         const initial = resample('day');
