@@ -23,6 +23,7 @@ def build_current_value_timeseries(df: pd.DataFrame,
             "Data_Zakupu",
             "Data_Emisji",
             "Data_Wykupu",
+            "purchase_date",
             "Data",
             "Date",
         ]
@@ -39,11 +40,18 @@ def build_current_value_timeseries(df: pd.DataFrame,
     work = df.copy()
 
     if value_column not in work.columns:
-        for alt in ["Aktualna Wartość", "Wartosc_Aktualna", "Current_Value", "Wartość"]:
+        for alt in ["Aktualna Wartość", "Wartosc_Aktualna", "Current_Value", "current_value", "Wartość"]:
             if alt in work.columns:
                 value_column = alt
                 break
-        if value_column not in work.columns:
+    if value_column not in work.columns:
+        if {"quantity", "purchase_price"}.issubset(work.columns):
+            work["__value_fallback"] = pd.to_numeric(work["quantity"], errors="coerce") * pd.to_numeric(work["purchase_price"], errors="coerce")
+            value_column = "__value_fallback"
+        elif {"nominal_value", "quantity"}.issubset(work.columns):
+            work["__value_fallback"] = pd.to_numeric(work["nominal_value"], errors="coerce") * pd.to_numeric(work["quantity"], errors="coerce")
+            value_column = "__value_fallback"
+        else:
             return {"labels": [], "values": []}
 
     work[value_column] = pd.to_numeric(work[value_column], errors="coerce")
@@ -70,7 +78,75 @@ def build_current_value_timeseries(df: pd.DataFrame,
     return {"labels": labels, "values": values}
 
 
-def render_current_value_png(df: pd.DataFrame, width_px: int = 900, height_px: int = 400) -> bytes:
+def build_allocation_pie_data(
+    df: pd.DataFrame,
+    group_by_candidates: List[str] = None,
+    value_column: str = "Aktualna_Wartosc",
+) -> Dict[str, List]:
+    """
+    Build allocation data for a pie/doughnut chart.
+
+    - Groups bonds by a preferred category column (first available among candidates)
+    - Sums current value per group
+    - Returns labels and values sorted descending by value
+    """
+    if df is None or df.empty:
+        return {"labels": [], "values": []}
+
+    if group_by_candidates is None:
+        group_by_candidates = [
+            "Typ_Obligacji",
+            "Seria_Obligacji",
+            "bond_type",
+            "series",
+            "Rodzaj",
+            "Category",
+        ]
+
+    group_col = None
+    for candidate in group_by_candidates:
+        if candidate in df.columns:
+            group_col = candidate
+            break
+
+    if group_col is None:
+        return {"labels": [], "values": []}
+
+    work = df.copy()
+
+    if value_column not in work.columns:
+        for alt in ["Aktualna Wartość", "Wartosc_Aktualna", "Current_Value", "Wartość"]:
+            if alt in work.columns:
+                value_column = alt
+                break
+        if value_column not in work.columns:
+            return {"labels": [], "values": []}
+
+    work[value_column] = pd.to_numeric(work[value_column], errors="coerce")
+    # Jeśli cała kolumna jest pusta, spróbuj fallbacku na quantity*purchase_price lub nominal_value*quantity
+    if work[value_column].notna().sum() == 0:
+        if {"quantity", "purchase_price"}.issubset(work.columns):
+            work[value_column] = pd.to_numeric(work["quantity"], errors="coerce") * pd.to_numeric(work["purchase_price"], errors="coerce")
+        elif {"nominal_value", "quantity"}.issubset(work.columns):
+            work[value_column] = pd.to_numeric(work["nominal_value"], errors="coerce") * pd.to_numeric(work["quantity"], errors="coerce")
+    work[group_col] = work[group_col].fillna("Inne")
+    work = work.dropna(subset=[value_column])
+
+    if work.empty:
+        return {"labels": [], "values": []}
+
+    agg = (
+        work.groupby(group_col)[value_column]
+        .sum()
+        .sort_values(ascending=False)
+    )
+
+    labels = agg.index.astype(str).tolist()
+    values = agg.round(2).tolist()
+    return {"labels": labels, "values": values}
+
+
+def render_current_value_png(df: pd.DataFrame, width_px: int = 900, height_px: int = 400, freq: str = "D") -> bytes:
     """
     Render the current value time series to a PNG image and return raw bytes.
     """
@@ -81,7 +157,7 @@ def render_current_value_png(df: pd.DataFrame, width_px: int = 900, height_px: i
     from matplotlib.ticker import FuncFormatter
     import io
 
-    ts = build_current_value_timeseries(df)
+    ts = build_current_value_timeseries(df, freq=freq)
     fig_w = max(1.0, width_px / 100)
     fig_h = max(1.0, height_px / 100)
 

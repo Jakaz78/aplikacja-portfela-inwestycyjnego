@@ -1,0 +1,38 @@
+{% extends "portfolio_base.html" %}
+
+{% block portfolio_title %}Kalendarz{% endblock %}
+
+{% block portfolio_content %}
+<h2 class="mb-3">Kalendarz wykupów obligacji</h2>
+
+<div id="calendar" style="max-width: 1100px; margin: 0 auto;"></div>
+
+<script id="events-data" type="application/json">{{ events | tojson }}</script>
+
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+<script>
+    (function(){
+        const raw = document.getElementById('events-data').textContent;
+        let events = [];
+        try { events = JSON.parse(raw) || []; } catch (e) {}
+
+        const calendarEl = document.getElementById('calendar');
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            height: 'auto',
+            locale: 'pl',
+            firstDay: 1,
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            },
+            events: events,
+        });
+        calendar.render();
+    })();
+</script>
+{% endblock %}
+
+

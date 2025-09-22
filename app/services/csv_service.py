@@ -1,25 +1,24 @@
-from pathlib import Path
-from flask import current_app
+# Nowy csv_service.py - tylko DB
 import pandas as pd
+from flask_login import current_user
 
-def _previous_csv_path() -> Path:
-    return Path(current_app.config['UPLOAD_FOLDER']) / 'previous.csv'
 
 def read_previous_df() -> pd.DataFrame:
-    path = _previous_csv_path()
-    if path.exists():
-        return pd.read_csv(path)
-    return pd.DataFrame()
+    """Odczyt portfolio z bazy danych"""
+    if not (hasattr(current_user, 'is_authenticated') and current_user.is_authenticated):
+        return pd.DataFrame()
+
+    from ..services.portfolio_service import PortfolioService
+    return PortfolioService.get_user_portfolio_df(current_user.id)
+
 
 def append_and_save(df: pd.DataFrame) -> int:
-    """
-    Dopisuje df do previous.csv i zwraca łączną liczbę wierszy po zapisie.
-    """
-    path = _previous_csv_path()
-    if path.exists():
-        prev = pd.read_csv(path)
-        combined = pd.concat([prev, df], ignore_index=True)
-    else:
-        combined = df
-    combined.to_csv(path, index=False)
-    return len(combined)
+    """Import danych przez PortfolioService"""
+    if not (hasattr(current_user, 'is_authenticated') and current_user.is_authenticated):
+        return 0
+
+    from ..services.portfolio_service import PortfolioService
+    result = PortfolioService.import_csv_data(current_user.id, df)
+    if result['errors']:
+        raise Exception(f"Import errors: {', '.join(result['errors'])}")
+    return result['imported']
