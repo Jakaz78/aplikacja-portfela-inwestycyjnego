@@ -1,7 +1,7 @@
 class Bond:
     def __init__(self, data_zakupu, seria_obligacji	, typ_obligacji, wartosc_nominalna, cena_zakupu, data_emisji,
-                 data_wykupu, oprocentowanie, aktualna_wartosc, kod_ISIN, numer_transakcji ):
-
+                 data_wykupu, oprocentowanie, aktualna_wartosc, kod_ISIN, numer_transakcji, id=None ):
+        self.id = id
         self.data_zakupu = data_zakupu
         self.seria_obligacji = seria_obligacji
         self.typ_obligacji = typ_obligacji
@@ -15,4 +15,4 @@ class Bond:
         self.numer_transakcji = numer_transakcji
 
     def __repr__(self):
-        return f"<Obligacja {self.Seria_Obligacji}>"
+        return f"<Obligacja {self.seria_obligacji}>"

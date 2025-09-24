@@ -12,9 +12,10 @@ class User(db.Model, UserMixin):
     last_name = db.Column(db.String(120), nullable=True)
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    # Ustawienia użytkownika (JSON)
+    created_at = db.Column(db.DateTime, default=datetime.now, nullable=False)
     settings = db.Column(db.JSON, nullable=True)
+
+    portfolios = db.relationship('Portfolio', backref='user', lazy='dynamic', cascade='all, delete-orphan')
 
     def set_password(self, password: str) -> None:
         self.password_hash = generate_password_hash(password)

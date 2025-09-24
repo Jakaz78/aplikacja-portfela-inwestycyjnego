@@ -15,14 +15,12 @@ class Transaction(db.Model):
     fees = db.Column(db.DECIMAL(10, 2), default=0.00)
     transaction_reference = db.Column(db.VARCHAR(100), index=True)
     notes = db.Column(db.Text)
-    created_at = db.Column(db.TIMESTAMP, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now)
 
-    portfolio = db.relationship('Portfolio', backref=db.backref('transactions', lazy=True))
-    bond = db.relationship('BondDefinition', backref=db.backref('transactions', lazy=True))
+    # portfolio = db.relationship('Portfolio', backref=db.backref('transactions', lazy=True))
+    # bond = db.relationship('BondDefinition', backref=db.backref('transactions', lazy=True))
 
     __table_args__ = (
-        db.Index('idx_transaction_date', 'transaction_date'),
-        db.Index('idx_reference', 'transaction_reference'),
+        db.Index('idx_portfolio_date', 'portfolio_id', 'transaction_date'),
     )
-
 

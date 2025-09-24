@@ -17,8 +17,8 @@ class BondDefinition(db.Model):
     nominal_value = db.Column(db.DECIMAL(10, 2), default=100.00)
     created_at = db.Column(db.TIMESTAMP, default=datetime.utcnow, nullable=False)
 
-    holdings = db.relationship('Holding', backref='bond', lazy=True)
-
+    holdings = db.relationship('Holding', backref='bond_definition', lazy=True)
+    transactions = db.relationship('Transaction', backref='bond_definition', lazy=True)
     def __repr__(self):
         return f'<Bond {self.isin}: {self.name}>'
 

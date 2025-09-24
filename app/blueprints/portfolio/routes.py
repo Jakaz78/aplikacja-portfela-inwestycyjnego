@@ -6,6 +6,10 @@ from ...services.portfolio_service import PortfolioService
 from ...models.bond import Bond
 from ...services.charts_service import build_current_value_timeseries, render_current_value_png
 from ...services.inflation_service import fetch_poland_cpi_yoy, align_series_to_common_months
+from ...models.holding import Holding
+from ...models.portfolio import Portfolio
+from ...models.transaction import Transaction
+from ... import db
 
 # Mapowanie kolumn
 COLUMN_MAPPING = {
@@ -59,6 +63,7 @@ def portfolio():
 
         for _, row in df.iterrows():
             obligacja = Bond(
+                id=row.get('holding_id') if 'holding_id' in row else None,
                 data_zakupu=_get_column_value(row, 'data_zakupu'),
                 seria_obligacji=_get_column_value(row, 'seria_obligacji'),
                 typ_obligacji=_get_column_value(row, 'typ_obligacji'),
@@ -233,3 +238,39 @@ def _read_csv_with_encoding(file):
         return pd.read_csv(file, header=0)
     except Exception as e:
         raise Exception(f"Nie można odczytać pliku CSV: {e}")
+
+
+@bp.post("/delete/<int:holding_id>")
+@login_required
+def delete_holding(holding_id):
+    """Usuwa holding z portfela użytkownika"""
+    try:
+        # Znajdź holding użytkownika
+        holding = Holding.query.join(Portfolio).filter(
+            Holding.id == holding_id,
+            Portfolio.user_id == current_user.id
+        ).first()
+
+        if not holding:
+            flash("Pozycja nie została znaleziona.", "danger")
+            return redirect(url_for('portfolio.portfolio'))
+
+        # Usuń powiązane transakcje
+        Transaction.query.filter_by(
+            portfolio_id=holding.portfolio_id,
+            transaction_reference=holding.transaction_reference
+        ).delete()
+
+        # Usuń holding
+        bond_name = holding.bond_definition.name if hasattr(holding,
+                                                            'bond_definition') else f"ID:{holding.bond_definition_id}"
+        db.session.delete(holding)
+        db.session.commit()
+
+        flash(f"Usunięto pozycję: {bond_name}", "success")
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Błąd podczas usuwania: {str(e)}", "danger")
+
+    return redirect(url_for('portfolio.portfolio'))

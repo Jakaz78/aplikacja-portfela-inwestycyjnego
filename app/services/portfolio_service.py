@@ -12,6 +12,7 @@ class PortfolioService:
     def get_user_portfolio_df(user_id: int) -> pd.DataFrame:
         """Pobiera portfolio użytkownika jako DataFrame"""
         query = db.session.query(
+            Holding.id.label('holding_id'),
             BondDefinition.isin.label('isin'),
             BondDefinition.name.label('name'),
             BondDefinition.issuer.label('issuer'),

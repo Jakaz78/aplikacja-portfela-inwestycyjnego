@@ -11,7 +11,7 @@ login_manager = LoginManager()
 
 
 def create_app(config_class=Config):
-    app = Flask(__name__, instance_relative_config=True)
+    app = Flask(__name__)
     app.config.from_object(config_class)
 
     # Inicjalizacja rozszerzeń
@@ -70,8 +70,12 @@ def configure_user_loader():
 
     @login_manager.user_loader
     def load_user(user_id):
-        if user_id and user_id.isdigit():
-            return User.query.get(int(user_id))
+        try:
+            if user_id and user_id.isdigit():
+                return User.query.get(int(user_id))
+        except Exception as ex:
+            print(ex)
+            pass  # Log błąd, jeśli chcesz
         return None
 
 

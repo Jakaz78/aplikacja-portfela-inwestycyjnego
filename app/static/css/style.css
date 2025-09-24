@@ -183,9 +183,8 @@ body {
 /* Pasek akcentowy full-bleed używany tylko tam, gdzie występuje w HTML (tu: portfolio.html) */
 .under-bar {
   position: relative;
-
-  margin: -10 auto;
-  padding: -20px
+  margin: -10px auto;
+  padding: -20px;
   width: calc(100vw);                 /* w tym wzorcu 100vw jest OK */
   max-width: 100vw;
   height: 30px;
@@ -196,3 +195,16 @@ body {
 .main-container > .under-bar {
   margin-top: -20px;  /* kompensuje padding-top: 20px kontenera */
 }
+/* Przycisk usuwania */
+.btn-outline-danger {
+    border-color: #dc3545;
+    color: #dc3545;
+    background-color: transparent;
+}
+
+.btn-outline-danger:hover {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: #fff;
+}
+
