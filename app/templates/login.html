@@ -15,6 +15,11 @@
       <input type="password" class="form-control" id="password" name="password" required>
     </div>
     <button type="submit" class="btn btn-primary">Zaloguj</button>
+      <p>
+    Nie masz konta?
+    <a href="{{ url_for('auth.register') }}">Zarejestruj się</a>
+      </p>
+
   </form>
 </div>
 {% endblock %}

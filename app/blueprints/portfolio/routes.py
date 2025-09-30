@@ -5,11 +5,12 @@ from . import bp
 from ...services.portfolio_service import PortfolioService
 from ...models.bond import Bond
 from ...services.charts_service import build_current_value_timeseries, render_current_value_png
-from ...services.inflation_service import fetch_poland_cpi_yoy, align_series_to_common_months
+
 from ...models.holding import Holding
 from ...models.portfolio import Portfolio
 from ...models.transaction import Transaction
 from ... import db
+
 
 # Mapowanie kolumn
 COLUMN_MAPPING = {
@@ -89,35 +90,9 @@ def portfolio_analysis():
 
     freq = request.args.get('freq', 'D')
     timeseries = build_current_value_timeseries(df, freq=freq)
-    inflation_compare = _build_inflation_comparison(timeseries)
 
     return render_template("portfolio_analysis.html",
-                           timeseries=timeseries,
-                           inflation_compare=inflation_compare)
-
-
-def _build_inflation_comparison(timeseries):
-    """Helper do budowania porównania z inflacją"""
-    if not current_app.config.get('FETCH_CPI', False):
-        return {'labels': [], 'portfolio_yoy': [], 'cpi_yoy': []}
-
-    try:
-        portfolio_ts_df = pd.DataFrame({
-            'date': pd.to_datetime(timeseries.get('labels', []), errors='coerce'),
-            'value': pd.to_numeric(timeseries.get('values', []), errors='coerce')
-        }).dropna()
-
-        cpi_yoy_df = fetch_poland_cpi_yoy()
-        compare_df = align_series_to_common_months(portfolio_ts_df, cpi_yoy_df)
-
-        return {
-            'labels': [d.isoformat() for d in compare_df['date'].tolist()] if not compare_df.empty else [],
-            'portfolio_yoy': compare_df['portfolio_yoy'].round(2).tolist() if not compare_df.empty else [],
-            'cpi_yoy': compare_df['cpi_yoy'].round(2).tolist() if not compare_df.empty else [],
-        }
-    except Exception as e:
-        print(f"Warning: Inflation comparison failed: {e}")
-        return {'labels': [], 'portfolio_yoy': [], 'cpi_yoy': []}
+                           timeseries=timeseries)
 
 
 @bp.get("/analiza/chart.png")
