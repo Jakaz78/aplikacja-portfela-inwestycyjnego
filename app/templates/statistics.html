@@ -1,7 +1,50 @@
-{% extends "portfolio_base.html" %}
+{% extends "base.html" %}
 
-{% block portfolio_title %}Statystyki{% endblock %}
+{% block title %}Statystyki{% endblock %}
 
-{% block portfolio_content %}
-elo
+{% block content %}
+<div class="container py-4">
+
+    <h1 class="h3 mb-4">Statystyki Twojego Portfela</h1>
+
+    {% if not has_data %}
+        <div class="alert alert-info d-flex align-items-center" role="alert">
+            <div>
+                <strong>Brak danych!</strong> Zaimportuj najpierw plik CSV w zakładce <a href="{{ url_for('portfolio.portfolio') }}" class="alert-link">Portfolio</a>, aby zobaczyć statystyki.
+            </div>
+        </div>
+    {% else %}
+
+        <div class="row g-4">
+
+            <div class="col-md-12">
+                <div class="card text-white bg-primary mb-3" style="background: linear-gradient(45deg, #23304b, #1b2431); border: 1px solid var(--secondary);">
+                    <div class="card-body text-center py-4">
+                        <h5 class="card-title opacity-75 text-uppercase" style="font-size: 0.9rem; letter-spacing: 1px;">Łączna wartość portfela</h5>
+                        <p class="display-4 fw-bold mb-0" style="color: #4cc38a;">
+                            {{ "{:,.2f}".format(total_value).replace(',', ' ').replace('.', ',') }} PLN
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 mx-auto">
+                <div class="card h-100">
+                    <div class="card-header">
+                        Struktura portfela (wg typu)
+                    </div>
+                    <div class="card-body d-flex justify-content-center align-items-center" style="min-height: 350px;">
+                        <canvas id="allocationChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            </div>
+
+    {% endif %}
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 {% endblock %}

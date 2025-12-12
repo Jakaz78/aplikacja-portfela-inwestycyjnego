@@ -1,8 +1,8 @@
-"""Start na czysto
+"""Nowa struktura z agregacja
 
-Revision ID: c70acdba0d02
+Revision ID: e806b1001040
 Revises: 
-Create Date: 2025-12-12 20:55:05.180539
+Create Date: 2025-12-12 22:02:55.269487
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'c70acdba0d02'
+revision = 'e806b1001040'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -39,12 +39,6 @@ def upgrade():
         batch_op.create_index(batch_op.f('ix_bond_definitions_maturity_date'), ['maturity_date'], unique=False)
         batch_op.create_index(batch_op.f('ix_bond_definitions_name'), ['name'], unique=False)
 
-    op.create_table('settings_options',
-    sa.Column('id', sa.SmallInteger(), nullable=False),
-    sa.Column('theme', sa.String(length=10), nullable=False),
-    sa.Column('language', sa.String(length=16), nullable=False),
-    sa.PrimaryKeyConstraint('id')
-    )
     op.create_table('users',
     sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False),
     sa.Column('first_name', sa.String(length=120), nullable=True),
@@ -92,10 +86,9 @@ def upgrade():
     sa.ForeignKeyConstraint(['bond_definition_id'], ['bond_definitions.id'], ),
     sa.ForeignKeyConstraint(['portfolio_id'], ['portfolios.id'], ),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('portfolio_id', 'transaction_reference', name='uq_holding_portfolio_ref')
+    sa.UniqueConstraint('portfolio_id', 'bond_definition_id', name='uq_holding_portfolio_bond')
     )
     with op.batch_alter_table('holdings', schema=None) as batch_op:
-        batch_op.create_index('idx_portfolio_bond', ['portfolio_id', 'bond_definition_id'], unique=False)
         batch_op.create_index(batch_op.f('ix_holdings_bond_definition_id'), ['bond_definition_id'], unique=False)
         batch_op.create_index(batch_op.f('ix_holdings_portfolio_id'), ['portfolio_id'], unique=False)
         batch_op.create_index(batch_op.f('ix_holdings_purchase_date'), ['purchase_date'], unique=False)
@@ -161,7 +154,6 @@ def downgrade():
         batch_op.drop_index(batch_op.f('ix_holdings_purchase_date'))
         batch_op.drop_index(batch_op.f('ix_holdings_portfolio_id'))
         batch_op.drop_index(batch_op.f('ix_holdings_bond_definition_id'))
-        batch_op.drop_index('idx_portfolio_bond')
 
     op.drop_table('holdings')
     op.drop_table('user_settings')
@@ -173,7 +165,6 @@ def downgrade():
         batch_op.drop_index(batch_op.f('ix_users_email'))
 
     op.drop_table('users')
-    op.drop_table('settings_options')
     with op.batch_alter_table('bond_definitions', schema=None) as batch_op:
         batch_op.drop_index(batch_op.f('ix_bond_definitions_name'))
         batch_op.drop_index(batch_op.f('ix_bond_definitions_maturity_date'))

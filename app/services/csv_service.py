@@ -1,24 +1,30 @@
-# Nowy csv_service.py - tylko DB
 import pandas as pd
-from flask_login import current_user
+from werkzeug.datastructures import FileStorage
 
 
-def read_previous_df() -> pd.DataFrame:
-    """Odczyt portfolio z bazy danych"""
-    if not (hasattr(current_user, 'is_authenticated') and current_user.is_authenticated):
-        return pd.DataFrame()
+class CsvService:
+    @staticmethod
+    def read_csv_with_encoding(file: FileStorage) -> pd.DataFrame:
+        """
+        Próbuje odczytać plik CSV używając różnych standardów kodowania
+        (utf-8, cp1250 dla polskich Windowsów, iso-8859-2).
+        """
+        encodings = ['utf-8', 'cp1250', 'iso-8859-2']
 
-    from ..services.portfolio_service import PortfolioService
-    return PortfolioService.get_user_portfolio_df(current_user.id)
+        # Kopia strumienia, żeby móc go przewijać
+        file_content = file.read()
 
+        for encoding in encodings:
+            try:
+                from io import BytesIO
+                file.seek(0)
+                # Używamy BytesIO, żeby pandas mógł czytać z pamięci
+                return pd.read_csv(BytesIO(file_content), header=0, encoding=encoding)
+            except (UnicodeDecodeError, UnicodeError):
+                continue
+            except Exception:
+                break
 
-def append_and_save(df: pd.DataFrame) -> int:
-    """Import danych przez PortfolioService"""
-    if not (hasattr(current_user, 'is_authenticated') and current_user.is_authenticated):
-        return 0
-
-    from ..services.portfolio_service import PortfolioService
-    result = PortfolioService.import_csv_data(current_user.id, df)
-    if result['errors']:
-        raise Exception(f"Import errors: {', '.join(result['errors'])}")
-    return result['imported']
+        # Ostatnia deska ratunku - domyślne ustawienia
+        file.seek(0)
+        return pd.read_csv(file, header=0)

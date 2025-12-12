@@ -24,11 +24,13 @@ def create_app(config_class=Config):
     from .blueprints.portfolio import bp as portfolio_bp
     from .blueprints.settings import bp as settings_bp
     from .blueprints.auth import bp as auth_bp
+    from .blueprints.statistics import bp as statistics_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(portfolio_bp, url_prefix="/portfolio")
     app.register_blueprint(settings_bp, url_prefix="/settings")
     app.register_blueprint(auth_bp, url_prefix="/auth")
+    app.register_blueprint(statistics_bp, url_prefix="/statistics")
 
     from .models.user import User
 

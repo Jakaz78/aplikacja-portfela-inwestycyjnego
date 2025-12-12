@@ -86,8 +86,9 @@
                            href="{{ url_for('portfolio.portfolio') }}">Portfolio</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {{ 'active' if request.endpoint == 'main.statistics' }}"
-                           href="{{ url_for('main.statistics') }}">Statystyki</a>
+                        <a class="nav-link {{ 'active' if 'statistics' in request.endpoint }}"
+                           href="{{ url_for('statistics.statistics') }}">Statystyki</a>
+                    </li>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {{ 'active' if 'settings' in request.endpoint }}"

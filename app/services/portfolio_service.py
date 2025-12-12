@@ -5,12 +5,16 @@ from app.models.transaction import Transaction
 from .. import db
 import pandas as pd
 from typing import Dict, Optional
+from datetime import date
 
 
 class PortfolioService:
+
     @staticmethod
     def get_user_portfolio_df(user_id: int) -> pd.DataFrame:
-        """Pobiera portfolio użytkownika jako DataFrame"""
+        """
+        Pobiera zagregowane portfolio użytkownika.
+        """
         query = db.session.query(
             Holding.id.label('holding_id'),
             BondDefinition.isin.label('isin'),
@@ -22,10 +26,14 @@ class PortfolioService:
             BondDefinition.emission_date.label('emission_date'),
             BondDefinition.coupon_rate.label('coupon_rate'),
             BondDefinition.nominal_value.label('nominal_value'),
+
+            # Dane z holdingu (już zagregowane)
             Holding.quantity.label('quantity'),
-            Holding.purchase_price.label('purchase_price'),
-            Holding.purchase_date.label('purchase_date'),
+            Holding.purchase_price.label('purchase_price'),  # Średnia ważona
+            Holding.purchase_date.label('purchase_date'),  # Data pierwszego/ostatniego zakupu
             Holding.current_value.label('current_value'),
+
+            # Transaction reference w holdingu może być pusty przy agregacji
             Holding.transaction_reference.label('transaction_reference'),
         ).select_from(Portfolio) \
             .join(Holding, Portfolio.id == Holding.portfolio_id) \
@@ -36,7 +44,6 @@ class PortfolioService:
 
     @staticmethod
     def get_or_create_default_portfolio(user_id: int) -> Portfolio:
-        """Pobiera lub tworzy domyślny portfel użytkownika"""
         portfolio = Portfolio.query.filter_by(user_id=user_id).first()
         if not portfolio:
             portfolio = Portfolio(user_id=user_id, name='Główny Portfel')
@@ -46,37 +53,97 @@ class PortfolioService:
 
     @staticmethod
     def import_csv_data(user_id: int, df: pd.DataFrame) -> Dict[str, any]:
-        """Importuje dane CSV do bazy danych"""
+        """
+        Importuje dane z CSV, agregując pozycje w Holdings i zapisując historię w Transactions.
+        """
         portfolio = PortfolioService.get_or_create_default_portfolio(user_id)
         imported_count = 0
         errors = []
 
+        # Start transakcji bazodanowej
         try:
             for index, row in df.iterrows():
                 try:
-                    # Walidacja ISIN
-                    isin = _extract_isin(row)
+                    # 1. Walidacja danych
+                    isin = _extract_val(row, ['Kod_ISIN', 'isin', 'kod_isin'])
                     if not isin:
-                        errors.append(f"Wiersz {index}: Brak ISIN")
+                        # Pomijamy puste wiersze bez błędu
                         continue
 
-                    # Unikaj duplikacji
-                    tx_ref = _extract_transaction_ref(row)
-                    if _is_duplicate(portfolio.id, tx_ref):
-                        imported_count += 1
-                        continue
+                    tx_ref = _extract_val(row, ['Numer_Transakcji', 'numer_transakcji', 'id_operacji'])
 
-                    # Utwórz lub pobierz definicję obligacji
-                    bond = _get_or_create_bond(isin, row)
+                    # 2. Sprawdź duplikaty w HISTORII TRANSAKCJI (nie w holdings!)
+                    if tx_ref and _transaction_exists(portfolio.id, tx_ref):
+                        continue  # Ta transakcja była już zaimportowana
 
-                    # Utwórz holding i transakcję
-                    _create_holding_and_transaction(portfolio.id, bond.id, row, tx_ref)
+                    # 3. Pobierz lub stwórz definicję obligacji
+                    bond_def = _get_or_create_bond_definition(isin, row)
+
+                    # 4. Parsowanie wartości
+                    qty = _parse_float(row, ['ilosc', 'Liczba', 'quantity'], default=1.0)
+                    price = _parse_float(row, ['Cena_Zakupu', 'cena', 'price'], default=100.0)
+                    curr_val = _parse_float(row, ['Aktualna_Wartosc', 'Wartosc', 'current_value'], default=0.0)
+                    p_date = _parse_date(row, ['Data_Zakupu', 'Data', 'date']) or date.today()
+
+                    # 5. Logika AGREGACJI (Upsert Holding)
+                    holding = Holding.query.filter_by(
+                        portfolio_id=portfolio.id,
+                        bond_definition_id=bond_def.id
+                    ).first()
+
+                    if holding:
+                        # Aktualizacja istniejącej pozycji (średnia ważona ceny)
+                        total_old_cost = float(holding.quantity) * float(holding.purchase_price)
+                        total_new_cost = float(qty) * float(price)
+                        new_total_qty = float(holding.quantity) + float(qty)
+
+                        if new_total_qty > 0:
+                            avg_price = (total_old_cost + total_new_cost) / new_total_qty
+                        else:
+                            avg_price = 0
+
+                        holding.quantity = new_total_qty
+                        holding.purchase_price = avg_price
+
+                        # Aktualizujemy current_value sumując
+                        if holding.current_value is not None:
+                            holding.current_value = float(holding.current_value) + float(curr_val)
+                        else:
+                            holding.current_value = curr_val
+
+                        # Czyścimy referencję transakcji, bo holding to teraz mix
+                        holding.transaction_reference = None
+
+                    else:
+                        # Nowa pozycja
+                        holding = Holding(
+                            portfolio_id=portfolio.id,
+                            bond_definition_id=bond_def.id,
+                            quantity=qty,
+                            purchase_price=price,
+                            purchase_date=p_date,
+                            current_value=curr_val,
+                            transaction_reference=None  # Nie wiążemy Holdingu z jedną transakcją
+                        )
+                        db.session.add(holding)
+
+                    # 6. Zapisz historię w Transactions (zawsze!)
+                    new_tx = Transaction(
+                        portfolio_id=portfolio.id,
+                        bond_definition_id=bond_def.id,
+                        transaction_type='BUY',
+                        quantity=qty,
+                        price=price,
+                        transaction_date=p_date,
+                        transaction_reference=tx_ref
+                    )
+                    db.session.add(new_tx)
+
                     imported_count += 1
 
                 except Exception as e:
-                    errors.append(f"Wiersz {index}: {e}")
+                    errors.append(f"Wiersz {index}: {str(e)}")
 
-            # Commit tylko jeśli brak błędów
             if errors:
                 db.session.rollback()
             else:
@@ -84,104 +151,78 @@ class PortfolioService:
 
         except Exception as e:
             db.session.rollback()
-            errors.append(str(e))
+            errors.append(f"Błąd ogólny: {str(e)}")
 
         return {"imported": imported_count, "errors": errors}
 
 
-# Helper functions - przeniesione poza klasę dla czytelności
-def _extract_isin(row) -> Optional[str]:
-    """Wyciąga ISIN z wiersza CSV"""
-    isin = str(row.get('Kod_ISIN') or row.get('isin') or '').strip()
-    return isin if isin else None
+# --- Helpers (funkcje pomocnicze) ---
+
+def _extract_val(row, keys):
+    for k in keys:
+        if k in row and pd.notna(row[k]) and str(row[k]).strip() != '':
+            return str(row[k]).strip()
+    return None
 
 
-def _extract_transaction_ref(row) -> str:
-    """Wyciąga numer transakcji z wiersza"""
-    return str(row.get('Numer_Transakcji') or row.get('numer_transakcji') or '')
-
-
-def _is_duplicate(portfolio_id: int, tx_ref: str) -> bool:
-    """Sprawdza czy transakcja już istnieje"""
-    return bool(Holding.query.filter_by(
-        portfolio_id=portfolio_id,
-        transaction_reference=tx_ref
-    ).first())
-
-
-def _parse_coupon_rate(coupon_raw) -> Optional[float]:
-    """Parsuje oprocentowanie z formatu '3.25%' na 0.0325"""
-    if not isinstance(coupon_raw, str) or not coupon_raw.strip().endswith('%'):
-        return None
-
+def _parse_float(row, keys, default=0.0):
+    val = _extract_val(row, keys)
+    if not val: return default
     try:
-        return float(coupon_raw.strip().replace('%', '').replace(',', '.')) / 100.0
-    except (ValueError, AttributeError):
+        # Obsługa polskiego formatu liczb
+        clean = str(val).replace(' ', '').replace(',', '.').replace('zł', '').replace('%', '')
+        return float(clean)
+    except:
+        return default
+
+
+def _parse_date(row, keys):
+    val = _extract_val(row, keys)
+    if not val: return None
+    try:
+        return pd.to_datetime(val, dayfirst=True).date()
+    except:
         return None
 
 
-def _get_or_create_bond(isin: str, row) -> BondDefinition:
-    """Pobiera lub tworzy definicję obligacji"""
-    bond = BondDefinition.query.filter_by(isin=isin).first()
+def _transaction_exists(pid, ref):
+    if not ref: return False
+    # Sprawdzamy w tabeli Transactions
+    return db.session.query(Transaction).filter_by(
+        portfolio_id=pid,
+        transaction_reference=ref
+    ).first() is not None
 
+
+def _get_or_create_bond_definition(isin, row):
+    bond = BondDefinition.query.filter_by(isin=isin).first()
     if not bond:
+        # Próba wyciągnięcia danych z różnych kolumn
+        name = _extract_val(row, ['Nazwa', 'Papier', 'name']) or isin
+        series = _extract_val(row, ['Seria_Obligacji', 'Seria', 'series']) or isin
+        b_type = _extract_val(row, ['Typ_Obligacji', 'Typ', 'type'])
+
+        # Parsowanie dat
+        mat_date = _parse_date(row, ['Data_Wykupu', 'Maturity'])
+        em_date = _parse_date(row, ['Data_Emisji', 'Emission'])
+
+        # Oprocentowanie
+        coupon = _parse_float(row, ['Oprocentowanie', 'Coupon']) / 100.0 if _extract_val(row, ['Oprocentowanie',
+                                                                                               'Coupon']) else None
+
         bond = BondDefinition(
             isin=isin,
-            name=str(row.get('Seria_Obligacji') or row.get('nazwa') or isin),
-            issuer=str(row.get('emitent') or 'Skarb Państwa'),
-            series=str(row.get('Seria_Obligacji') or row.get('seria') or ''),
-            bond_type=str(row.get('Typ_Obligacji') or row.get('typ') or ''),
-            maturity_date=_parse_date(row.get('Data_Wykupu') or row.get('data_wykupu')),
-            emission_date=_parse_date(row.get('Data_Emisji') or row.get('data_emisji')),
-            coupon_rate=_parse_coupon_rate(row.get('Oprocentowanie') or row.get('oprocentowanie')),
-            nominal_value=pd.to_numeric(row.get('Wartosc_Nominalna') or row.get('wartosc_nominalna') or 100.00,
-                                        errors='coerce')
+            name=name,
+            issuer='Skarb Państwa',  # Domyślnie
+            series=series,
+            bond_type=b_type,
+            maturity_date=mat_date,
+            emission_date=em_date,
+            coupon_rate=coupon
         )
         db.session.add(bond)
-        db.session.flush()
+        db.session.flush()  # Żeby dostać ID
     else:
-        # Uzupełnij brakujące dane
-        _update_bond_if_needed(bond, row)
-
+        # Opcjonalnie: Uzupełnianie brakujących danych w definicji
+        pass
     return bond
-
-
-def _parse_date(date_value):
-    """Parsuje datę z różnych formatów"""
-    if not date_value:
-        return None
-
-    parsed = pd.to_datetime(date_value, errors='coerce')
-    return parsed.date() if pd.notna(parsed) else None
-
-
-def _create_holding_and_transaction(portfolio_id: int, bond_id: int, row, tx_ref: str):
-    """Tworzy holding i powiązaną transakcję"""
-    quantity = pd.to_numeric(row.get('ilosc') or 1, errors='coerce')
-    purchase_price = pd.to_numeric(row.get('Cena_Zakupu') or row.get('cena_zakupu') or 100, errors='coerce')
-    purchase_date = _parse_date(row.get('Data_Zakupu') or row.get('data_zakupu'))
-    current_value = pd.to_numeric(row.get('Aktualna_Wartosc') or row.get('aktualna_wartosc'), errors='coerce')
-
-    # Holding
-    holding = Holding(
-        portfolio_id=portfolio_id,
-        bond_definition_id=bond_id,
-        quantity=quantity,
-        purchase_price=purchase_price,
-        purchase_date=purchase_date,
-        current_value=current_value,
-        transaction_reference=tx_ref
-    )
-    db.session.add(holding)
-
-    # Transaction
-    transaction = Transaction(
-        portfolio_id=portfolio_id,
-        bond_definition_id=bond_id,
-        transaction_type='BUY',
-        quantity=quantity,
-        price=purchase_price,
-        transaction_date=purchase_date,
-        transaction_reference=tx_ref
-    )
-    db.session.add(transaction)

@@ -1,21 +1,83 @@
-{% extends "base.html" %}
+{% extends "portfolio_base.html" %}
 
-{% block title %}Portfolio{% endblock %}
+{% block portfolio_content %}
 
-{% block content %}
-<div class="container py-3">
-    <div class="d-flex flex-wrap align-items-center gap-2 mb-3 border-bottom pb-2">
-        <a class="btn {{ 'btn-dark' if request.endpoint == 'portfolio.portfolio_analysis' else 'btn-outline-secondary' }}"
-           href="{{ url_for('portfolio.portfolio_analysis') }}">Analiza</a>
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>📂 Twoje Obligacje</span>
+                </div>
+            <div class="card-body">
 
-        <a class="btn {{ 'btn-dark' if request.endpoint == 'portfolio.portfolio' else 'btn-outline-secondary' }}"
-           href="{{ url_for('portfolio.portfolio') }}">Historia</a>
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                  {% if messages %}
+                    {% for category, message in messages %}
+                      <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                      </div>
+                    {% endfor %}
+                  {% endif %}
+                {% endwith %}
 
+                <form action="{{ url_for('portfolio.import_csv') }}" method="post" enctype="multipart/form-data" class="d-flex gap-2 align-items-end mb-4 p-3 bg-light rounded border" style="background-color: var(--row-odd) !important; border-color: var(--secondary) !important;">
+                    <div class="flex-grow-1">
+                        <label for="csv_file" class="form-label small text-muted">Importuj dane (CSV z biura maklerskiego)</label>
+                        <input type="file" name="csv_file" id="csv_file" class="form-control form-control-sm" required>
+                    </div>
+                    <button type="submit" class="btn btn-accent btn-sm">Wgraj plik</button>
+                </form>
 
-        <a class="btn {{ 'btn-dark' if request.endpoint == 'portfolio.portfolio_calendar' else 'btn-outline-secondary' }}"
-           href="{{ url_for('portfolio.portfolio_calendar') }}">Kalendarz</a>
+                {% if obligacje %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" style="white-space: nowrap;">
+                        <thead>
+                            <tr>
+                                <th>Seria</th>
+                                <th>Typ</th>
+                                <th>Data Wykupu</th>
+                                <th class="text-end">Ilość</th>
+                                <th class="text-end">Cena Zakupu</th>
+                                <th class="text-end">Wartość</th>
+                                <th class="text-end">Akcje</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for obligacja in obligacje %}
+                            <tr>
+                                <td class="fw-bold text-accent">{{ obligacja.seria_obligacji }}</td>
+                                <td><span class="badge bg-secondary text-light fw-normal">{{ obligacja.typ_obligacji }}</span></td>
+                                <td>{{ obligacja.data_wykupu }}</td>
+                                <td class="text-end">{{ obligacja.wartosc_nominalna }} szt.</td> <td class="text-end">{{ obligacja.cena_zakupu }} zł</td>
+                                <td class="text-end fw-bold" style="color: #4cc38a;">
+                                    {% if obligacja.aktualna_wartosc %}
+                                        {{ obligacja.aktualna_wartosc }} zł
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <form action="{{ url_for('portfolio.delete_holding', holding_id=obligacja.id) }}" method="POST" onsubmit="return confirm('Czy na pewno chcesz usunąć tę pozycję?');" style="display:inline;">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm py-0 px-2" title="Usuń">
+                                            &times;
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <h4 class="fw-normal">Twój portfel jest pusty</h4>
+                        <p>Użyj formularza powyżej, aby zaimportować plik CSV.</p>
+                    </div>
+                {% endif %}
+
+            </div>
+        </div>
     </div>
-
-    {% block portfolio_content %}{% endblock %}
 </div>
 {% endblock %}
