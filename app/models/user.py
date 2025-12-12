@@ -13,7 +13,11 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now, nullable=False)
-    settings = db.Column(db.SmallInteger, default=1)  # 1 = Dark + Polski
+
+    # --- ZMIANA: Relacja do ustawień zamiast kolumny integer ---
+    # lazy='joined' sprawia, że ustawienia ładują się od razu z użytkownikiem (szybciej)
+    settings = db.relationship('UserSettings', back_populates='user', uselist=False, cascade='all, delete-orphan',
+                               lazy='joined')
 
     portfolios = db.relationship('Portfolio', backref='user', lazy='dynamic', cascade='all, delete-orphan')
 
@@ -22,5 +26,3 @@ class User(db.Model, UserMixin):
 
     def check_password(self, password: str) -> bool:
         return check_password_hash(self.password_hash, password)
-
-

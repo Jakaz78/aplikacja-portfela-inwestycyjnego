@@ -1,89 +1,78 @@
-from flask import render_template, request, session, redirect, url_for, flash, current_app
+from flask import render_template, request, redirect, url_for, flash, current_app
 from flask_login import login_required, current_user
 from . import bp
 from ... import db
-from ...models.settings_options import SettingsOption
+from ...models.user_settings import UserSettings
 
-def ensure_user_settings():
-    if not current_user.is_authenticated:
-        if 'user_settings' not in session:
-            session['user_settings'] = current_app.config['DEFAULT_SETTINGS'].copy()
-        return session['user_settings']
 
+def ensure_user_settings_exist():
+    """Upewnia się, że użytkownik ma przypisany obiekt UserSettings."""
     if not current_user.settings:
-        current_user.settings = 1  # domyślnie ID 1 (Dark + Polski)
-        try:
-            db.session.add(current_user)
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
+        # Jeśli z jakiegoś powodu ustawienia nie istnieją, stwórz domyślne
+        defaults = current_app.config['DEFAULT_SETTINGS']
+        new_settings = UserSettings(
+            user_id=current_user.id,
+            theme=defaults.get('theme', 'Dark'),
+            language=defaults.get('language', 'Polski')
+        )
+        db.session.add(new_settings)
+        db.session.commit()
+        # Odśwież użytkownika, żeby widział relację
+        db.session.refresh(current_user)
 
-    option = SettingsOption.query.get(current_user.settings)
-    if option:
-        settings = {'theme': option.theme, 'language': option.language}
-    else:
-        settings = current_app.config['DEFAULT_SETTINGS'].copy()
-    session['user_settings'] = settings
-    return settings
 
 @bp.route("/", methods=["GET", "POST"])
 @login_required
 def settings():
-    settings = ensure_user_settings()
+    # 1. Zabezpieczenie: upewnij się, że rekord w bazie istnieje
+    ensure_user_settings_exist()
+
+    # Teraz możemy bezpiecznie odwoływać się do current_user.settings
+    user_settings = current_user.settings
 
     if request.method == "POST":
         action = request.form.get("action")
+
         if action == "save":
             theme = request.form.get("theme")
             language = request.form.get("language")
 
-            updated_settings = settings.copy()
-
+            # Walidacja i zapis
             if theme in current_app.config['THEMES']:
-                updated_settings['theme'] = theme
+                user_settings.theme = theme
+
             if language in current_app.config['LANGUAGES']:
-                updated_settings['language'] = language
-
-            session['user_settings'] = updated_settings
-
-            # Znajdź ID ustawienia w tabeli po theme i language
-            option = SettingsOption.query.filter_by(theme=updated_settings['theme'], language=updated_settings['language']).first()
-            if option:
-                current_user.settings = option.id
-            else:
-                current_user.settings = 1  # fallback default
+                user_settings.language = language
 
             try:
-                db.session.add(current_user)
                 db.session.commit()
                 flash("Ustawienia zostały zapisane!", "success")
-            except Exception:
+            except Exception as e:
                 db.session.rollback()
-                flash("Wystąpił błąd podczas zapisu ustawień.", "danger")
+                flash(f"Błąd zapisu: {str(e)}", "danger")
 
         elif action == "reset":
-            option = SettingsOption.query.get(1)
-            if option:
-                session['user_settings'] = {'theme': option.theme, 'language': option.language}
-            else:
-                session['user_settings'] = current_app.config['DEFAULT_SETTINGS'].copy()
-            current_user.settings = 1
+            # Przywróć wartości domyślne z konfigu
+            defaults = current_app.config['DEFAULT_SETTINGS']
+            user_settings.theme = defaults['theme']
+            user_settings.language = defaults['language']
+
             try:
-                db.session.add(current_user)
                 db.session.commit()
-                flash("Ustawienia zostały zresetowane!", "info")
+                flash("Przywrócono ustawienia domyślne.", "info")
             except Exception:
                 db.session.rollback()
-                flash("Wystąpił błąd podczas resetu ustawień.", "danger")
+                flash("Błąd podczas resetowania.", "danger")
 
         else:
             flash("Nieznana akcja.", "warning")
 
         return redirect(url_for("settings.settings"))
 
+    # GET: Wyświetl formularz
     return render_template(
         "settings.html",
-        settings=session.get('user_settings', current_app.config['DEFAULT_SETTINGS']),
+        settings=user_settings,  # Przekazujemy obiekt prosto z bazy
         themes=current_app.config['THEMES'],
         languages=current_app.config['LANGUAGES'],
     )

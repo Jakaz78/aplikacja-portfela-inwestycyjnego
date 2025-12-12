@@ -1,37 +1,94 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="text-center" style="margin-top: 80px;">
-    <!-- Logo i tytuł na bazie Twojego MainMenu -->
-    <div class="mb-5">
-<div style="width: fit-content; margin: 0 auto 24px;">
-    <img src="{{ url_for('static', filename='images/small-logo.svg') }}"
-         alt="Logo aplikacji"
-         style="max-width: 100%; height: auto; border-radius: 16px;">
-</div>
-        <h1 style="font-size: 2.5rem; font-weight: bold; margin-bottom: 12px;">Aplikacja Finansowa</h1>
-        <p style="font-size: 1.2rem; color: var(--muted);">Zarządzanie portfelem i analizy</p>
+<div class="d-flex justify-content-center align-items-center" style="min-height: calc(100vh - 150px);">
+
+    <div class="text-center" style="max-width: 600px; width: 100%;">
+
+        {% if current_user.is_authenticated %}
+            <div class="mb-5">
+                <h1 class="fw-bold mb-2">Cześć, {{ current_user.first_name or current_user.email.split('@')[0] }}! 👋</h1>
+                <p class="text-muted" style="font-size: 1.1rem;">Twoje centrum zarządzania obligacjami</p>
+            </div>
+
+            <div class="row g-3 justify-content-center">
+                <div class="col-md-6">
+                    <a href="{{ url_for('portfolio.portfolio') }}" class="card text-decoration-none h-100 hover-effect">
+                        <div class="card-body py-4">
+                            <div style="font-size: 2.5rem; margin-bottom: 10px;">📊</div>
+                            <h5 class="card-title text-white">Twój Portfel</h5>
+                            <p class="card-text text-muted small">Przeglądaj swoje obligacje i analizuj wyniki</p>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-md-6">
+                    <a href="{{ url_for('portfolio.portfolio') }}" class="card text-decoration-none h-100 hover-effect">
+                        <div class="card-body py-4">
+                            <div style="font-size: 2.5rem; margin-bottom: 10px;">📁</div>
+                            <h5 class="card-title text-white">Importuj CSV</h5>
+                            <p class="card-text text-muted small">Wgraj dane z biura maklerskiego</p>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-md-6">
+                    <a href="{{ url_for('main.statistics') }}" class="card text-decoration-none h-100 hover-effect">
+                        <div class="card-body py-4">
+                            <div style="font-size: 2.5rem; margin-bottom: 10px;">📈</div>
+                            <h5 class="card-title text-white">Statystyki</h5>
+                            <p class="card-text text-muted small">Sprawdź historię wzrostu wartości</p>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-md-6">
+                    <a href="{{ url_for('settings.settings') }}" class="card text-decoration-none h-100 hover-effect">
+                        <div class="card-body py-4">
+                            <div style="font-size: 2.5rem; margin-bottom: 10px;">⚙️</div>
+                            <h5 class="card-title text-white">Ustawienia</h5>
+                            <p class="card-text text-muted small">Dostosuj walutę i wygląd aplikacji</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+        {% else %}
+            <div class="mb-5">
+                <img src="{{ url_for('static', filename='images/small-logo.svg') }}"
+                     alt="Logo" width="80" height="80"
+                     class="mb-4"
+                     style="background: linear-gradient(45deg, #7c9cff, #4cc38a); border-radius: 20px; padding: 10px; box-shadow: 0 10px 30px rgba(124, 156, 255, 0.2);">
+
+                <h1 class="fw-bold mb-3" style="font-size: 3rem;">FinApp</h1>
+                <p class="text-muted mb-4" style="font-size: 1.25rem; line-height: 1.6;">
+                    Profesjonalne narzędzie do zarządzania<br>portfelem obligacji skarbowych.
+                </p>
+
+                <div class="d-flex gap-3 justify-content-center mt-4">
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-accent px-4 py-2" style="font-size: 1.1rem;">
+                        Rozpocznij teraz
+                    </a>
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light px-4 py-2" style="font-size: 1.1rem;">
+                        Zaloguj się
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+
     </div>
-
-    <!-- Menu przycisków -->
-    <div class="d-flex flex-column align-items-center gap-3" style="max-width: 300px; margin: 0 auto;">
-        <a class="btn btn-accent w-100 py-3" href="{{ url_for('portfolio.portfolio') }}">
-            📊 Portfel obligacji
-        </a>
-        <a class="btn btn-secondary w-100 py-3">
-            📁 Importuj CSV
-        </a>
-        <a class="btn btn-secondary w-100 py-3">
-            ➕ Dodaj obligację
-        </a>
-        <a class="btn btn-secondary w-100 py-3" href="{{ url_for('settings.settings') }}">
-            ⚙️ Ustawienia
-        </a>
-    </div>
-
-    <!-- Stopka -->
-
-
-
 </div>
+
+<style>
+    .hover-effect {
+        transition: transform 0.2s, border-color 0.2s;
+        border: 1px solid var(--panel);
+        background: var(--panel);
+    }
+    .hover-effect:hover {
+        transform: translateY(-5px);
+        border-color: var(--accent);
+        background: var(--header);
+    }
+</style>
 {% endblock %}

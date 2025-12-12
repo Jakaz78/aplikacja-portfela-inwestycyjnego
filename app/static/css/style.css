@@ -1,4 +1,29 @@
-/* Kolory z Twojego styles.py */
+
+
+/* --- FUNDAMENTY (Fix dla skaczącego logo i suwaka) --- */
+html {
+    /* To sprawia, że miejsce na suwak jest zawsze zarezerwowane.
+       Dzięki temu logo nie przesuwa się przy zmianie stron krótkich na długie. */
+    scrollbar-gutter: stable;
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: "Inter", "Segoe UI", sans-serif;
+    margin: 0;
+    padding: 0;
+    /* Zapobiega poziomemu przewijaniu */
+    overflow-x: hidden;
+    width: 100%;
+}
+footer {
+    position: fixed; /* Przykleja element */
+    bottom: 0;       /* Do samego dołu */
+    left: 0;
+    width: 100%;     /* Na całą szerokość */
+    z-index: 10;     /* Żeby był nad tłem */
+}
 :root {
     --bg: #0f1216;
     --top-bg: #121821;
@@ -14,197 +39,169 @@
     --row-hover: #1a2433;
 }
 
-body {
-    background-color: var(--bg);
-    color: var(--text);
-    font-family: "Segoe UI", sans-serif;
-    margin: 0;
-    padding: 0;
-}
-
-.topbar {
-    background-color: var(--top-bg);
-    padding: 12px 0;
-    border-bottom: 1px solid var(--panel);
-}
-
-.topbar-content {
-    max-width: 1200px;
-    margin: 0 auto;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 20px;
-}
-
-.logo-wrap {
-    display: flex;
-    align-items: center;
-}
-
-.logo {
-    width: 28px;
-    height: 28px;
-    background: linear-gradient(45deg, #7c9cff, #4cc38a);
-    border-radius: 6px;
-    margin-right: 12px;
-}
-
-.logo-text {
-    font-size: 16px;
-    font-weight: bold;
-    color: var(--text);
-}
-
+/* --- UKŁAD GŁÓWNY --- */
 .main-container {
     max-width: 1200px;
     margin: 0 auto;
     padding: 20px;
-    min-height: calc(100vh - 150px);
+    /* Minimalna wysokość, żeby stopka nie "latała" w połowie ekranu na pustych stronach */
+    min-height: calc(100vh - 160px);
 }
 
+/* --- KARTY I PANELE --- */
 .card {
     background-color: var(--panel);
     border: 1px solid var(--header);
-    border-radius: 8px;
+    border-radius: 12px; /* Nowocześniejsze zaokrąglenie */
     overflow: hidden;
 }
 
 .card-header {
     background-color: var(--header);
     padding: 16px 20px;
-    font-weight: bold;
-    font-size: 14px;
+    font-weight: 600;
+    font-size: 15px;
     color: #d7e2f1;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 
+/* --- PRZYCISKI --- */
 .btn-accent {
     background-color: var(--accent);
     border: none;
-    color: white;
-    padding: 12px 24px;
+    color: #0f1216; /* Ciemny tekst na jasnym akcencie jest czytelniejszy */
+    padding: 10px 20px;
     border-radius: 6px;
-    font-weight: 500;
+    font-weight: 600;
     text-decoration: none;
     display: inline-block;
-    transition: background-color 0.2s;
+    transition: all 0.2s ease;
 }
 
 .btn-accent:hover {
     background-color: var(--accent-hover);
-    color: white;
+    color: #0f1216;
+    transform: translateY(-1px);
 }
 
 .btn-secondary {
     background-color: var(--secondary);
     border: none;
     color: #c7d2e5;
-    padding: 10px 18px;
+    padding: 8px 16px;
     border-radius: 6px;
     text-decoration: none;
     display: inline-block;
     margin: 0 4px;
     transition: background-color 0.2s;
+    font-size: 0.9rem;
 }
 
 .btn-secondary:hover {
     background-color: #2b3a5d;
-    color: #c7d2e5;
+    color: #fff;
 }
 
-.table-dark {
-    background-color: var(--panel);
+.btn-outline-danger {
+    border-color: #dc3545;
+    color: #dc3545;
+    background-color: transparent;
+    transition: all 0.2s;
+}
+
+.btn-outline-danger:hover {
+    background-color: #dc3545;
+    color: #fff;
+}
+
+/* --- TABELE --- */
+.table {
     color: var(--text);
+    border-color: var(--secondary);
 }
 
-.table-dark th {
+.table > :not(caption) > * > * {
+    background-color: transparent; /* Fix dla Bootstrapa nadpisującego tła */
+    border-bottom-color: var(--secondary);
+    padding: 12px 16px;
+}
+
+.table thead th {
     background-color: var(--header);
-    border-color: var(--secondary);
-}
-
-.table-dark td {
-    border-color: var(--secondary);
-}
-
-.table tbody tr:nth-child(odd) {
-    background-color: var(--row-odd);
-}
-
-.table tbody tr:nth-child(even) {
-    background-color: var(--row-even);
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid var(--secondary);
 }
 
 .table tbody tr:hover {
     background-color: var(--row-hover) !important;
 }
 
-/* Formularze */
-.form-control {
-    background-color: var(--panel);
+/* --- FORMULARZE --- */
+.form-control, .form-select {
+    background-color: var(--row-odd);
     border: 1px solid var(--secondary);
     color: var(--text);
+    padding: 10px 12px;
 }
 
-.form-control:focus {
-    background-color: var(--panel);
+.form-control:focus, .form-select:focus {
+    background-color: var(--row-even);
     border-color: var(--accent);
     color: var(--text);
-    box-shadow: 0 0 0 0.2rem rgba(143, 162, 255, 0.25);
+    box-shadow: 0 0 0 3px rgba(143, 162, 255, 0.15);
 }
 
 .form-label {
     color: var(--text);
     font-weight: 500;
+    font-size: 0.9rem;
+    margin-bottom: 6px;
 }
 
-/* Stats cards */
+/* --- ELEMENTY SPECJALNE --- */
+
+/* Pasek pod wykresem (Portfolio) - naprawiony width */
+.under-bar {
+  position: relative;
+  width: 100%;       /* ZMIANA: Było 100vw, co powodowało poziomy suwak */
+  height: 6px;       /* Subtelniejszy pasek */
+  background: linear-gradient(90deg, var(--accent), #4cc38a);
+  border-radius: 3px;
+  margin-top: 20px;
+  opacity: 0.8;
+}
+
+/* Karty statystyk */
 .stats-card {
-    background: linear-gradient(135deg, var(--accent), #6b8cff);
+    background: linear-gradient(135deg, var(--secondary), #1b2431);
+    border: 1px solid var(--header);
     color: white;
     padding: 24px;
-    border-radius: 8px;
+    border-radius: 12px;
     text-align: center;
 }
 
 .stats-card h3 {
-    margin: 0;
-    font-size: 2.2rem;
-    font-weight: bold;
+    margin: 8px 0 0 0;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--accent);
 }
 
 .stats-card h5 {
-    margin: 0 0 8px 0;
-    opacity: 0.9;
-    font-weight: 500;
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
-
-
-/* Pasek akcentowy full-bleed używany tylko tam, gdzie występuje w HTML (tu: portfolio.html) */
-.under-bar {
-  position: relative;
-  margin: -10px auto;
-  padding: -20px;
-  width: calc(100vw);                 /* w tym wzorcu 100vw jest OK */
-  max-width: 100vw;
-  height: 30px;
-  background: linear-gradient(90deg, var(--accent), #6b8cff);
-  pointer-events: none;
+/* Placeholder dla inputów */
+::placeholder {
+    color: var(--muted) !important;
+    opacity: 0.5 !important;
 }
-
-.main-container > .under-bar {
-  margin-top: -20px;  /* kompensuje padding-top: 20px kontenera */
-}
-/* Przycisk usuwania */
-.btn-outline-danger {
-    border-color: #dc3545;
-    color: #dc3545;
-    background-color: transparent;
-}
-
-.btn-outline-danger:hover {
-    background-color: #dc3545;
-    border-color: #dc3545;
-    color: #fff;
-}
-

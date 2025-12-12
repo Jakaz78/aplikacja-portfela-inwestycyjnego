@@ -19,10 +19,11 @@ class Config:
         f"?charset=utf8mb4"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-
-    # App settings
+    MAX_CONTENT_LENGTH = 2 * 1024 * 1024
+    SQLALCHEMY_ECHO = True  # Dla deweloperki
+    # App
     THEMES = ['Dark', 'Light']
     LANGUAGES = ['Polski', 'English', 'Deutsch']
     DEFAULT_SETTINGS = {'theme': 'Dark', 'language': 'Polski'}
-    FETCH_CPI = os.getenv('FETCH_CPI', 'false').lower() == 'true'
+    #FETCH_CPI = os.getenv('FETCH_CPI', 'false').lower() == 'true'
 

@@ -1,87 +1,21 @@
-{% extends "portfolio_base.html" %}
+{% extends "base.html" %}
 
-{% block portfolio_title %}Portfolio{% endblock %}
+{% block title %}Portfolio{% endblock %}
 
-{% block portfolio_content %}
+{% block content %}
+<div class="container py-3">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3 border-bottom pb-2">
+        <a class="btn {{ 'btn-dark' if request.endpoint == 'portfolio.portfolio_analysis' else 'btn-outline-secondary' }}"
+           href="{{ url_for('portfolio.portfolio_analysis') }}">Analiza</a>
 
-
-
-
-
-    {% with messages = get_flashed_messages(with_categories=true) %}
-  {% if messages %}
-    {% for category, message in messages %}
-      <div class="alert alert-{{ category }} alert-dismissible mt-3 fade show" role="alert">
-          {{ message }}
-      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-      </div>
-    {% endfor %}
-  {% endif %}
-{% endwith %}
+        <a class="btn {{ 'btn-dark' if request.endpoint == 'portfolio.portfolio' else 'btn-outline-secondary' }}"
+           href="{{ url_for('portfolio.portfolio') }}">Historia</a>
 
 
+        <a class="btn {{ 'btn-dark' if request.endpoint == 'portfolio.portfolio_calendar' else 'btn-outline-secondary' }}"
+           href="{{ url_for('portfolio.portfolio_calendar') }}">Kalendarz</a>
+    </div>
 
-<div>
-{% if obligacje %}
-    <table border="1">
-        <thead>
-            <tr>
-                <th>Data zakupu</th>
-                <th>Seria</th>
-                <th>Typ</th>
-                <th>Wartość nominalna</th>
-                <th>Cena zakupu</th>
-                <th>Data emisji </th>
-                <th>Data wykupu</th>
-                <th>Oprocentowanie</th>
-                <th>Aktualna wartość</th>
-                <th>Kod ISIN</th>
-                <th>Numer transakcji</th>
-                <th>Akcje</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for obl in obligacje %}
-                <tr>
-                    <td>{{ obl.data_zakupu }}</td>
-                    <td>{{ obl.seria_obligacji }}</td>
-                    <td>{{ obl.typ_obligacji }}</td>
-                    <td>{{ obl.wartosc_nominalna }}</td>
-                    <td>{{ obl.cena_zakupu }}</td>
-                    <td>{{ obl.data_emisji }}</td>
-                    <td>{{ obl.data_wykupu }}</td>
-                    <td>{{ obl.oprocentowanie }}</td>
-                    <td>{{ obl.aktualna_wartosc }}</td>
-                    <td>{{ obl.kod_ISIN }}</td>
-                    <td>{{ obl.numer_transakcji }}</td>
-                    <td>
-                        <!-- ✅ PRZYCISK USUWANIA -->
-                        {% if obl.id %}
-                        <form method="POST" action="{{ url_for('portfolio.delete_holding', holding_id=obl.id) }}"
-                              style="display: inline-block;"
-                              onsubmit="return confirm('Czy na pewno chcesz usunąć tę pozycję?')">
-                            <button type="submit" class="btn btn-sm btn-outline-danger"
-                                    style="padding: 2px 8px; font-size: 12px;"
-                                    title="Usuń pozycję">
-                                ❌
-                            </button>
-                        </form>
-                        {% endif %}
-                    </td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-{% else %}
-    <p>Brak danych do wyświetlenia.</p>
-{% endif %}
-</div>
-
-</br>
-<div style="display: flex; flex-direction: column; align-items: flex-start;">
-    <form method="POST" action="{{ url_for('portfolio.import_csv') }}" enctype="multipart/form-data">
-        <input type="file" name="csv_file" accept=".csv" required class="form-control" style="margin-bottom: 12px;">
-        <button type="submit" class="btn-accent">Importuj CSV</button>
-    </form>
+    {% block portfolio_content %}{% endblock %}
 </div>
 {% endblock %}

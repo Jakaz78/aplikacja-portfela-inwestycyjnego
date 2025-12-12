@@ -155,13 +155,6 @@ def _parse_date(date_value):
     return parsed.date() if pd.notna(parsed) else None
 
 
-def _update_bond_if_needed(bond: BondDefinition, row):
-    """Uzupełnia brakujące dane w istniejącej obligacji"""
-    coupon_rate = _parse_coupon_rate(row.get('Oprocentowanie') or row.get('oprocentowanie'))
-    if bond.coupon_rate is None and coupon_rate is not None:
-        bond.coupon_rate = coupon_rate
-
-
 def _create_holding_and_transaction(portfolio_id: int, bond_id: int, row, tx_ref: str):
     """Tworzy holding i powiązaną transakcję"""
     quantity = pd.to_numeric(row.get('ilosc') or 1, errors='coerce')

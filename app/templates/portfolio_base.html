@@ -4,12 +4,23 @@
 
 {% block content %}
 <div class="container py-3">
-    <div class="d-flex flex-wrap align-items-center gap-2 mb-3" style="border-bottom: 1px solid rgba(0,0,0,0.08); padding-bottom: 8px;">
-        <a class="btn btn-secondary" href="{{ url_for('portfolio.portfolio_analysis') }}">Analiza</a>
-        <a class="btn btn-secondary" href="{{ url_for('portfolio.portfolio') }}">Historia</a>
-        <a class="btn btn-secondary" href="{{ url_for('main.statistics') }}">Statystyki</a>
-        <a class="btn btn-secondary" href="{{ url_for('settings.settings') }}">Ustawienia</a>
-        <a class="btn btn-secondary" href="{{ url_for('portfolio.portfolio_calendar') }}">Kalendarz</a>
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3 border-bottom pb-2">
+
+        <a class="btn {{ 'btn-dark' if request.endpoint == 'portfolio.portfolio_analysis' else 'btn-outline-secondary' }}"
+           href="{{ url_for('portfolio.portfolio_analysis') }}">
+           Analiza
+        </a>
+
+        <a class="btn {{ 'btn-dark' if request.endpoint == 'portfolio.portfolio' else 'btn-outline-secondary' }}"
+           href="{{ url_for('portfolio.portfolio') }}">
+           Historia
+        </a>
+
+        <a class="btn {{ 'btn-dark' if request.endpoint == 'portfolio.portfolio_calendar' else 'btn-outline-secondary' }}"
+           href="{{ url_for('portfolio.portfolio_calendar') }}">
+           Kalendarz
+        </a>
+
     </div>
 
     {% block portfolio_content %}{% endblock %}
