@@ -5,6 +5,7 @@ from . import bp
 from ...services.portfolio_service import PortfolioService
 from ...services.csv_service import CsvService
 from ...services.charts_service import build_current_value_timeseries
+from ...services.inflation_service import fetch_poland_cpi_yoy, align_series_to_common_months
 from ...models.bond import Bond
 from ...models.holding import Holding
 from ...models.portfolio import Portfolio
@@ -30,11 +31,50 @@ def portfolio():
 @bp.get("/analiza")
 @login_required
 def portfolio_analysis():
-    """Analiza portfela"""
+    """Analiza portfela (widok)"""
+    # Początkowe dane (domyślnie 'D')
     df = PortfolioService.get_user_portfolio_df(current_user.id)
+    timeseries = build_current_value_timeseries(df, freq='D')
+
+    # Inflacja
+    inflation_data = {}
+    if not df.empty:
+        # Przygotuj dane do porównania (ostatnie 5 lat dla przykładu)
+        cpi = fetch_poland_cpi_yoy(start='2020-01-01')
+        
+        # Przygotuj DataFrame z wartościami portfela do formatu oczekiwanego przez align
+        # build_current_value_timeseries zwraca dict list, musimy to zamienić z powrotem na DF lub użyć surowego DF
+        # Lepiej użyć surowego DF (transakcje/holdings) i przeliczyć total value na każdy dzień
+        # Ale uprośćmy: weźmy timeseries 'D' i zamieńmy na DF
+        
+        if timeseries['labels']:
+            ts_df = pd.DataFrame({
+                'date': timeseries['labels'],
+                'value': timeseries['values']
+            })
+            comparison = align_series_to_common_months(ts_df, cpi)
+            if not comparison.empty:
+                inflation_data = {
+                    'labels': comparison['date'].astype(str).tolist(),
+                    'portfolio_yoy': comparison['portfolio_yoy'].round(2).tolist(),
+                    'cpi_yoy': comparison['cpi_yoy'].round(2).tolist()
+                }
+
+    return render_template("portfolio_analysis.html", timeseries=timeseries, inflation_data=inflation_data)
+
+
+@bp.get("/chart-data")
+@login_required
+def chart_data():
+    """API endpoint dla danych wykresów"""
     freq = request.args.get('freq', 'D')
-    timeseries = build_current_value_timeseries(df, freq=freq)
-    return render_template("portfolio_analysis.html", timeseries=timeseries)
+    valid_freqs = {'D': 'D', 'W': 'W-MON', 'M': 'ME', 'Q': 'QE'}
+    pandas_freq = valid_freqs.get(freq, 'D')
+
+    df = PortfolioService.get_user_portfolio_df(current_user.id)
+    timeseries = build_current_value_timeseries(df, freq=pandas_freq)
+    
+    return timeseries  # Flask automatycznie zwróci JSON dla słownika
 
 
 @bp.get("/kalendarz")

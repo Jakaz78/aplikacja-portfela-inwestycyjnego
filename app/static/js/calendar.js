@@ -13,7 +13,7 @@
         headerToolbar: {
             left: 'prev,next today',
             center: 'title',
-            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            right: 'multiMonthYear,dayGridMonth,timeGridWeek'
         },
         events: events,
     });

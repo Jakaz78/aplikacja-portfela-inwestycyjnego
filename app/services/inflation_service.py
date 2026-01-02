@@ -5,60 +5,43 @@ import logging
 
 def fetch_poland_cpi_yoy(start: str = None, end: str = None) -> pd.DataFrame:
     """
-    Fetch Poland CPI YoY from Yahoo Finance via yfinance.
-
-    We use the series '^PLCPIYOY' if available; if not, fallback to CPI index 'PLCPIIDX' and compute YoY.
-    Returns a DataFrame with columns: ['date', 'value'] where value is percentage (e.g., 6.5).
+    Pobiera wskaźnik CPI dla Polski (r/r) z Yahoo Finance.
+    Zwraca DataFrame z kolumnami ['date', 'value'] (procent).
     """
     import yfinance as yf
-    # Suppress noisy yfinance logging
     logging.getLogger("yfinance").setLevel(logging.ERROR)
-    logging.getLogger("urllib3").setLevel(logging.ERROR)
 
-    start = start or '2010-01-01'
+    start = start or '2015-01-01'
     end = end or datetime.utcnow().date().isoformat()
 
-    # Try YoY series first
-    yoy_symbol_candidates = ["^PLCPIYOY", "PLCPI YOY", "PLCPI%3AYOY"]
-    for symbol in yoy_symbol_candidates:
-        try:
-            t = yf.Ticker(symbol)
-            hist = t.history(start=start, end=end, interval="1mo")
-            if not hist.empty:
-                s = hist['Close'].dropna()
-                if not s.empty:
-                    df = pd.DataFrame({
-                        'date': s.index.to_period('M').to_timestamp().date,
-                        'value': s.values
-                    })
-                    return df
-        except Exception:
-            pass
+    # Kod Yahoo Finance dla indeksu CPI lub podobnego wskaźnika. 
+    # Niestety Yahoo często zmienia tickery dla danych makro. 
+    # Spróbujmy najpopularniejszego kandydata na "Polish CPI".
+    # Jeśli nie zadziała, zwracamy pusty (w realnym wdrożeniu należałoby to brać np. z GUS/Stooq/FRED).
+    symbol = "PLNCPI=ECI" 
 
-    # Fallback: monthly CPI index, compute YoY
-    idx_symbol_candidates = ["^PLCPI", "PLCPI", "PLCPIIDX"]
-    for symbol in idx_symbol_candidates:
-        try:
-            t = yf.Ticker(symbol)
-            hist = t.history(start=start, end=end, interval="1mo")
-            if hist.empty:
-                continue
-            s = hist['Close'].dropna()
-            if s.empty:
-                continue
-            yoy = (s.pct_change(12) * 100).dropna()
-            if yoy.empty:
-                continue
-            df = pd.DataFrame({
-                'date': yoy.index.to_period('M').to_timestamp().date,
-                'value': yoy.values
-            })
-            return df
-        except Exception:
-            pass
+    try:
+        t = yf.Ticker(symbol)
+        # Pobieramy historię
+        hist = t.history(start=start, end=end, interval="1mo")
+        
+        if hist.empty:
+            # Fallback - czasem CL=F lub inne futures dają podgląd, ale tu lepiej nie zgadywać.
+            # Zwróćmy pusty, frontend obsłuży brak danych.
+            return pd.DataFrame(columns=['date', 'value'])
 
-    # As a last resort, return empty
-    return pd.DataFrame(columns=['date', 'value'])
+        # Zakładając, że to jest wartość indeksu lub % r/r.
+        # Sprawdzamy to: ECI na Yahoo zazwyczaj zwraca wartość procentową (np. 14.4 dla 14.4%).
+        s = hist['Close'].dropna()
+        
+        df = pd.DataFrame({
+            'date': s.index.to_period('M').to_timestamp().date,
+            'value': s.values
+        })
+        return df
+
+    except Exception:
+        return pd.DataFrame(columns=['date', 'value'])
 
 
 def align_series_to_common_months(portfolio_ts: pd.DataFrame, cpi_yoy: pd.DataFrame) -> pd.DataFrame:

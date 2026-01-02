@@ -1,123 +1,100 @@
 
 
 (function () {
-    const raw = document.getElementById('ts-data').textContent;
-    let ts = { labels: [], values: [] };
-    try { ts = JSON.parse(raw); } catch (e) { }
-    if (!(ts && ts.labels && ts.labels.length)) return;
-
-    const parseDate = (s) => new Date(s);
-    const base = ts.labels.map((d, i) => ({ date: parseDate(d), value: Number(ts.values[i]) }))
-        .filter(p => !isNaN(p.date.getTime()) && isFinite(p.value))
-        .sort((a, b) => a.date - b.date);
-
-    function keyWeek(date) {
-        const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-        const dayNum = d.getUTCDay() || 7;
-        d.setUTCDate(d.getUTCDate() + (4 - dayNum));
-        const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-        const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-        return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
-    }
-    function keyMonth(date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`; }
-    function keyQuarter(date) { const q = Math.floor(date.getMonth() / 3) + 1; return `${date.getFullYear()}-Q${q}`; }
-
-    function resample(period) {
-        if (period === 'day') {
-            return { labels: base.map(p => p.date.toISOString().slice(0, 10)), values: base.map(p => p.value) };
-        }
-        const bucket = new Map();
-        const order = [];
-        for (const p of base) {
-            let k;
-            if (period === 'week') k = keyWeek(p.date);
-            else if (period === 'month') k = keyMonth(p.date);
-            else if (period === 'quarter') k = keyQuarter(p.date);
-            if (!bucket.has(k)) order.push(k);
-            bucket.set(k, p);
-        }
-        const labels = [];
-        const values = [];
-        for (const k of order) {
-            const p = bucket.get(k);
-            if (!p) continue;
-            labels.push(k);
-            values.push(p.value);
-        }
-        return { labels, values };
-    }
-
-    const canvas = document.getElementById('valueChart');
-    const ctx = canvas.getContext('2d');
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    gradient.addColorStop(0, 'rgba(13, 110, 253, 0.25)');
-    gradient.addColorStop(1, 'rgba(13, 110, 253, 0.00)');
+    // --- Helper Config ---
     const formatterPLN = (v) => new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(v);
+    const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        animation: { duration: 400, easing: 'easeOutQuart' },
+        elements: { line: { borderWidth: 2 }, point: { hitRadius: 12 } },
+        plugins: { legend: { display: false } }
+    };
 
-    const initial = resample('day');
-    const chart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: initial.labels,
-            datasets: [{
-                label: 'Łączna aktualna wartość (PLN)',
-                data: initial.values,
-                borderColor: '#0d6efd',
-                backgroundColor: gradient,
-                fill: true,
-                tension: 0.3,
-                pointRadius: 2,
-                pointHoverRadius: 6,
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            animation: { duration: 400, easing: 'easeOutQuart' },
-            layout: { padding: { left: 8, right: 16, top: 8, bottom: 8 } },
-            elements: { line: { borderWidth: 2 }, point: { hitRadius: 12 } },
-            scales: {
-                x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } },
-                y: { beginAtZero: false, grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { callback: formatterPLN } }
-            },
-            plugins: {
-                legend: { display: false },
-                tooltip: { enabled: true, intersect: false, mode: 'index', callbacks: { label: (ctx) => ` ${formatterPLN(ctx.parsed.y)}` } }
+    // --- 1. Value Chart (Main) ---
+    const tsEl = document.getElementById('ts-data');
+    const tsCanvas = document.getElementById('valueChart');
+    let chartInstance = null;
+
+    if (tsEl && tsCanvas) {
+        let initialData = { labels: [], values: [] };
+        try { initialData = JSON.parse(tsEl.textContent); } catch (e) { }
+
+        const ctx = tsCanvas.getContext('2d');
+        const gradient = ctx.createLinearGradient(0, 0, 0, tsCanvas.height);
+        gradient.addColorStop(0, 'rgba(13, 110, 253, 0.25)');
+        gradient.addColorStop(1, 'rgba(13, 110, 253, 0.00)');
+
+        function renderValueChart(data) {
+            if (chartInstance) {
+                chartInstance.data.labels = data.labels;
+                chartInstance.data.datasets[0].data = data.values;
+                chartInstance.update();
+                return;
             }
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Wartość (PLN)',
+                        data: data.values,
+                        borderColor: '#0d6efd',
+                        backgroundColor: gradient,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 2,
+                        pointHoverRadius: 6,
+                    }]
+                },
+                options: {
+                    ...commonOptions,
+                    layout: { padding: { left: 8, right: 16, top: 8, bottom: 8 } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } },
+                        y: { beginAtZero: false, grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { callback: formatterPLN } }
+                    },
+                    plugins: {
+                        ...commonOptions.plugins,
+                        tooltip: { enabled: true, intersect: false, mode: 'index', callbacks: { label: (c) => ` ${formatterPLN(c.parsed.y)}` } }
+                    }
+                }
+            });
         }
-    });
 
-    document.getElementById('period').addEventListener('change', (e) => {
-        const period = e.target.value;
-        const next = resample(period);
-        chart.data.labels = next.labels;
-        chart.data.datasets[0].data = next.values;
-        chart.update();
-    });
+        if (initialData.labels && initialData.labels.length) {
+            renderValueChart(initialData);
+        }
 
-    // Pie chart removed
+        // Logic handled via API fetch
+        const periodSelect = document.getElementById('period');
+        if (periodSelect) {
+            periodSelect.addEventListener('change', (e) => {
+                const map = { 'day': 'D', 'week': 'W', 'month': 'M', 'quarter': 'Q' };
+                const apiFreq = map[e.target.value] || 'D';
+                fetch(`/portfolio/chart-data?freq=${apiFreq}`)
+                    .then(r => r.json())
+                    .then(d => renderValueChart(d))
+                    .catch(e => console.error('Chart fetch error:', e));
+            });
+        }
+    }
 
-    // Inflation vs Portfolio YoY
-    try {
-        const cmpRawText = document.getElementById('inflation-data').textContent;
-        const cmp = JSON.parse(cmpRawText || '{}') || { labels: [], portfolio_yoy: [], cpi_yoy: [] };
+    // --- 2. Inflation Comparison Chart ---
+    const infEl = document.getElementById('inflation-data');
+    const infCanvas = document.getElementById('inflationCompare');
+
+    if (infEl && infCanvas) {
+        let cmp = {};
+        try { cmp = JSON.parse(infEl.textContent); } catch (e) { }
+
         if (cmp.labels && cmp.labels.length) {
-            const container = document.createElement('div');
-            container.className = 'mt-5';
-            container.style.maxWidth = '1000px';
-            container.style.margin = '0 auto';
-            container.innerHTML = `
-                    <h3 class="h5 mb-3">Zwrot portfela r/r vs inflacja r/r</h3>
-                    <div style="position: relative; height: 360px;">
-                        <canvas id="inflationCompare"></canvas>
-                    </div>
-                `;
-            document.currentScript.parentElement.insertBefore(container, document.currentScript);
+            const icCtx = infCanvas.getContext('2d');
+            const labels = cmp.labels.map(d => new Date(d).toISOString().slice(0, 7)); // YYYY-MM
 
-            const ic = document.getElementById('inflationCompare').getContext('2d');
-            const labels = cmp.labels.map(d => new Date(d).toISOString().slice(0, 7));
-            const chart2 = new Chart(ic, {
+            new Chart(icCtx, {
                 type: 'line',
                 data: {
                     labels,
@@ -143,9 +120,7 @@
                     ]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: { mode: 'index', intersect: false },
+                    ...commonOptions,
                     scales: {
                         x: { grid: { display: false } },
                         y: {
@@ -154,15 +129,15 @@
                         }
                     },
                     plugins: {
-                        legend: { position: 'bottom' },
+                        legend: { position: 'bottom', display: true },
                         tooltip: {
                             callbacks: {
-                                label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(2)}%`
+                                label: (c) => ` ${c.dataset.label}: ${c.parsed.y?.toFixed(2)}%`
                             }
                         }
                     }
                 }
             });
         }
-    } catch (e) { /* no-op */ }
+    }
 })();

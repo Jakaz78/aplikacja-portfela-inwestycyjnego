@@ -60,84 +60,26 @@ class PortfolioService:
         imported_count = 0
         errors = []
 
-        # Start transakcji bazodanowej
         try:
             for index, row in df.iterrows():
                 try:
-                    # 1. Walidacja danych
-                    isin = _extract_val(row, ['Kod_ISIN', 'isin', 'kod_isin'])
-                    if not isin:
-                        # Pomijamy puste wiersze bez błędu
+                    # 1. Parsowanie wiersza
+                    row_data = PortfolioService._parse_csv_row(row)
+                    if not row_data:
                         continue
 
-                    tx_ref = _extract_val(row, ['Numer_Transakcji', 'numer_transakcji', 'id_operacji'])
+                    # 2. Sprawdzenie duplikatów transakcji
+                    if row_data['tx_ref'] and _transaction_exists(portfolio.id, row_data['tx_ref']):
+                        continue
 
-                    # 2. Sprawdź duplikaty w HISTORII TRANSAKCJI (nie w holdings!)
-                    if tx_ref and _transaction_exists(portfolio.id, tx_ref):
-                        continue  # Ta transakcja była już zaimportowana
+                    # 3. Definicja obligacji
+                    bond_def = _get_or_create_bond_definition(row_data['isin'], row)
 
-                    # 3. Pobierz lub stwórz definicję obligacji
-                    bond_def = _get_or_create_bond_definition(isin, row)
+                    # 4. Aktualizacja Holdingu (Upsert)
+                    PortfolioService._upsert_holding(portfolio, bond_def, row_data)
 
-                    # 4. Parsowanie wartości
-                    qty = _parse_float(row, ['ilosc', 'Liczba', 'quantity'], default=1.0)
-                    price = _parse_float(row, ['Cena_Zakupu', 'cena', 'price'], default=100.0)
-                    curr_val = _parse_float(row, ['Aktualna_Wartosc', 'Wartosc', 'current_value'], default=0.0)
-                    p_date = _parse_date(row, ['Data_Zakupu', 'Data', 'date']) or date.today()
-
-                    # 5. Logika AGREGACJI (Upsert Holding)
-                    holding = Holding.query.filter_by(
-                        portfolio_id=portfolio.id,
-                        bond_definition_id=bond_def.id
-                    ).first()
-
-                    if holding:
-                        # Aktualizacja istniejącej pozycji (średnia ważona ceny)
-                        total_old_cost = float(holding.quantity) * float(holding.purchase_price)
-                        total_new_cost = float(qty) * float(price)
-                        new_total_qty = float(holding.quantity) + float(qty)
-
-                        if new_total_qty > 0:
-                            avg_price = (total_old_cost + total_new_cost) / new_total_qty
-                        else:
-                            avg_price = 0
-
-                        holding.quantity = new_total_qty
-                        holding.purchase_price = avg_price
-
-                        # Aktualizujemy current_value sumując
-                        if holding.current_value is not None:
-                            holding.current_value = float(holding.current_value) + float(curr_val)
-                        else:
-                            holding.current_value = curr_val
-
-                        # Czyścimy referencję transakcji, bo holding to teraz mix
-                        holding.transaction_reference = None
-
-                    else:
-                        # Nowa pozycja
-                        holding = Holding(
-                            portfolio_id=portfolio.id,
-                            bond_definition_id=bond_def.id,
-                            quantity=qty,
-                            purchase_price=price,
-                            purchase_date=p_date,
-                            current_value=curr_val,
-                            transaction_reference=None  # Nie wiążemy Holdingu z jedną transakcją
-                        )
-                        db.session.add(holding)
-
-                    # 6. Zapisz historię w Transactions (zawsze!)
-                    new_tx = Transaction(
-                        portfolio_id=portfolio.id,
-                        bond_definition_id=bond_def.id,
-                        transaction_type='BUY',
-                        quantity=qty,
-                        price=price,
-                        transaction_date=p_date,
-                        transaction_reference=tx_ref
-                    )
-                    db.session.add(new_tx)
+                    # 5. Rejestracja Transakcji
+                    PortfolioService._create_transaction_record(portfolio, bond_def, row_data)
 
                     imported_count += 1
 
@@ -154,6 +96,82 @@ class PortfolioService:
             errors.append(f"Błąd ogólny: {str(e)}")
 
         return {"imported": imported_count, "errors": errors}
+
+    @staticmethod
+    def _parse_csv_row(row) -> Optional[Dict]:
+        """Ekstrahuje i parsuje dane z pojedynczego wiersza DataFrame."""
+        isin = _extract_val(row, ['Kod_ISIN', 'isin', 'kod_isin'])
+        if not isin:
+            return None
+
+        return {
+            'isin': isin,
+            'tx_ref': _extract_val(row, ['Numer_Transakcji', 'numer_transakcji', 'id_operacji']),
+            'qty': _parse_float(row, ['ilosc', 'Liczba', 'quantity'], default=1.0),
+            'price': _parse_float(row, ['Cena_Zakupu', 'cena', 'price'], default=100.0),
+            'curr_val': _parse_float(row, ['Aktualna_Wartosc', 'Wartosc', 'current_value'], default=0.0),
+            'date': _parse_date(row, ['Data_Zakupu', 'Data', 'date']) or date.today()
+        }
+
+    @staticmethod
+    def _upsert_holding(portfolio: Portfolio, bond_def: BondDefinition, data: Dict):
+        """Aktualizuje lub tworzy pozycję (Holding) w portfelu."""
+        holding = Holding.query.filter_by(
+            portfolio_id=portfolio.id,
+            bond_definition_id=bond_def.id
+        ).first()
+
+        qty = data['qty']
+        price = data['price']
+        curr_val = data['curr_val']
+        p_date = data['date']
+
+        if holding:
+            # Aktualizacja istniejącej pozycji (średnia ważona)
+            total_old_cost = float(holding.quantity) * float(holding.purchase_price)
+            total_new_cost = float(qty) * float(price)
+            new_total_qty = float(holding.quantity) + float(qty)
+
+            if new_total_qty > 0:
+                avg_price = (total_old_cost + total_new_cost) / new_total_qty
+            else:
+                avg_price = 0
+
+            holding.quantity = new_total_qty
+            holding.purchase_price = avg_price
+
+            # Sumowanie wartości bieżącej
+            current_val_base = float(holding.current_value) if holding.current_value is not None else 0.0
+            holding.current_value = current_val_base + float(curr_val)
+
+            # Reset referencji transakcji przy agregacji
+            holding.transaction_reference = None
+        else:
+            # Nowa pozycja
+            holding = Holding(
+                portfolio_id=portfolio.id,
+                bond_definition_id=bond_def.id,
+                quantity=qty,
+                purchase_price=price,
+                purchase_date=p_date,
+                current_value=curr_val,
+                transaction_reference=None
+            )
+            db.session.add(holding)
+
+    @staticmethod
+    def _create_transaction_record(portfolio: Portfolio, bond_def: BondDefinition, data: Dict):
+        """Tworzy rekord w historii transakcji."""
+        new_tx = Transaction(
+            portfolio_id=portfolio.id,
+            bond_definition_id=bond_def.id,
+            transaction_type='BUY',
+            quantity=data['qty'],
+            price=data['price'],
+            transaction_date=data['date'],
+            transaction_reference=data['tx_ref']
+        )
+        db.session.add(new_tx)
 
 
 # --- Helpers (funkcje pomocnicze) ---

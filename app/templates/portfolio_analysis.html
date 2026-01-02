@@ -23,5 +23,19 @@
 <div class="alert alert-info mt-3">Brak danych do wyświetlenia. Zaimportuj plik CSV w zakładce Portfolio.</div>
 {% endif %}
 
+<!-- Inflation Comparison Section -->
+{% if inflation_data and inflation_data.labels %}
+<div class="mt-5" style="max-width: 1000px; margin: 0 auto;">
+    <h3 class="h5 mb-3">Zwrot portfela r/r vs inflacja r/r</h3>
+    <div style="position: relative; height: 360px;">
+        <canvas id="inflationCompare"></canvas>
+    </div>
+</div>
+{% endif %}
+
+<!-- Data Injection -->
+<script id="ts-data" type="application/json">{{ timeseries | tojson }}</script>
+<script id="inflation-data" type="application/json">{{ inflation_data | default({}) | tojson }}</script>
+
 <script src="{{ url_for('static', filename='js/analysis.js') }}"></script>
 {% endblock %}

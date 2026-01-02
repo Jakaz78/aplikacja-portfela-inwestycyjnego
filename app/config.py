@@ -11,10 +11,8 @@ class Config:
 
     # Database
     SQLALCHEMY_DATABASE_URI = (
-        f"mysql+pymysql://{os.getenv('MYSQL_USER')}"
-        f":{os.getenv('MYSQL_PASSWORD')}"
-        f"@{os.getenv('MYSQL_HOST')}"
-        f":{os.getenv('MYSQL_PORT')}"
+        f"mysql+pymysql://{os.getenv('MYSQL_USER')}:{os.getenv('MYSQL_PASSWORD')}"
+        f"@{os.getenv('MYSQL_HOST')}:{os.getenv('MYSQL_PORT', '3306')}"
         f"/{os.getenv('MYSQL_DB')}"
         f"?charset=utf8mb4"
     )
