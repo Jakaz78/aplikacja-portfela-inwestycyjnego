@@ -115,30 +115,28 @@ class PortfolioService:
 
     @staticmethod
     def _upsert_holding(portfolio: Portfolio, bond_def: BondDefinition, data: Dict):
-        """Aktualizuje lub tworzy pozycję (Holding) w portfelu."""
-        holding = Holding.query.filter_by(
-            portfolio_id=portfolio.id,
-            bond_definition_id=bond_def.id
-        ).first()
-
+        """Aktualizuje lub tworzy pozycję (Holding) w portfelu - teraz uwzględnia partie (lots)."""
         qty = data['qty']
         price = data['price']
         curr_val = data['curr_val']
         p_date = data['date']
 
+        # Szukamy DOKŁADNEGO dopasowania (ta sama obligacja, ta sama data zakupu, ta sama cena zakupu)
+        # Dzięki temu "dokupienie" w tych samych warunkach powiększy pozycję,
+        # a zakup w innej dacie/cenie stworzy nową (osobny wiersz).
+        holding = Holding.query.filter_by(
+            portfolio_id=portfolio.id,
+            bond_definition_id=bond_def.id,
+            purchase_date=p_date,
+            purchase_price=price
+        ).first()
+
         if holding:
-            # Aktualizacja istniejącej pozycji (średnia ważona)
-            total_old_cost = float(holding.quantity) * float(holding.purchase_price)
-            total_new_cost = float(qty) * float(price)
+            # Dopasowano partię -> Aktualizacja ilości
             new_total_qty = float(holding.quantity) + float(qty)
-
-            if new_total_qty > 0:
-                avg_price = (total_old_cost + total_new_cost) / new_total_qty
-            else:
-                avg_price = 0
-
             holding.quantity = new_total_qty
-            holding.purchase_price = avg_price
+            
+            # Cena jest ta sama (warunek wyszukiwania), więc nie zmieniamy purchase_price
 
             # Sumowanie wartości bieżącej
             current_val_base = float(holding.current_value) if holding.current_value is not None else 0.0
@@ -147,7 +145,7 @@ class PortfolioService:
             # Reset referencji transakcji przy agregacji
             holding.transaction_reference = None
         else:
-            # Nowa pozycja
+            # Nowa pozycja (osobny lot)
             holding = Holding(
                 portfolio_id=portfolio.id,
                 bond_definition_id=bond_def.id,

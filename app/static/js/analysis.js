@@ -18,7 +18,7 @@
     let chartInstance = null;
 
     if (tsEl && tsCanvas) {
-        let initialData = { labels: [], values: [] };
+        let initialData = { labels: [], values: [], costs: [] };
         try { initialData = JSON.parse(tsEl.textContent); } catch (e) { }
 
         const ctx = tsCanvas.getContext('2d');
@@ -30,6 +30,9 @@
             if (chartInstance) {
                 chartInstance.data.labels = data.labels;
                 chartInstance.data.datasets[0].data = data.values;
+                if (chartInstance.data.datasets[1]) {
+                    chartInstance.data.datasets[1].data = data.costs || [];
+                }
                 chartInstance.update();
                 return;
             }
@@ -38,27 +41,44 @@
                 type: 'line',
                 data: {
                     labels: data.labels,
-                    datasets: [{
-                        label: 'Wartość (PLN)',
-                        data: data.values,
-                        borderColor: '#0d6efd',
-                        backgroundColor: gradient,
-                        fill: true,
-                        tension: 0.3,
-                        pointRadius: 2,
-                        pointHoverRadius: 6,
-                    }]
+                    datasets: [
+                        {
+                            label: 'Wartość (PLN)',
+                            data: data.values,
+                            borderColor: '#0d6efd',
+                            backgroundColor: gradient,
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 2,
+                            pointHoverRadius: 6,
+                        },
+                        {
+                            label: 'Koszt zakupu (PLN)',
+                            data: data.costs || [],
+                            borderColor: '#adb5bd',  // Gray
+                            backgroundColor: 'transparent',
+                            borderDash: [5, 5],      // Dashed line
+                            tension: 0.1,
+                            pointRadius: 0,
+                            pointHoverRadius: 4,
+                        }
+                    ]
                 },
                 options: {
                     ...commonOptions,
                     layout: { padding: { left: 8, right: 16, top: 8, bottom: 8 } },
                     scales: {
                         x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } },
-                        y: { beginAtZero: false, grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { callback: formatterPLN } }
+                        y: {
+                            beginAtZero: false,
+                            grid: { color: 'rgba(0,0,0,0.06)' },
+                            ticks: { callback: formatterPLN }
+                        }
                     },
                     plugins: {
                         ...commonOptions.plugins,
-                        tooltip: { enabled: true, intersect: false, mode: 'index', callbacks: { label: (c) => ` ${formatterPLN(c.parsed.y)}` } }
+                        legend: { display: true }, // Enable legend for 2 series
+                        tooltip: { enabled: true, intersect: false, mode: 'index', callbacks: { label: (c) => ` ${c.dataset.label}: ${formatterPLN(c.parsed.y)}` } }
                     }
                 }
             });
@@ -133,6 +153,44 @@
                         tooltip: {
                             callbacks: {
                                 label: (c) => ` ${c.dataset.label}: ${c.parsed.y?.toFixed(2)}%`
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // --- 3. Allocation Pie Chart ---
+    const allocEl = document.getElementById('allocation-data');
+    const allocCanvas = document.getElementById('allocationChart');
+
+    if (allocEl && allocCanvas) {
+        let aud = {};
+        try { aud = JSON.parse(allocEl.textContent); } catch (e) { }
+
+        if (aud.labels && aud.labels.length) {
+            new Chart(allocCanvas.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: aud.labels,
+                    datasets: [{
+                        data: aud.values,
+                        backgroundColor: [
+                            '#0d6efd', '#6610f2', '#6f42c1', '#d63384', '#dc3545',
+                            '#fd7e14', '#ffc107', '#198754', '#20c997', '#0dcaf0'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right' },
+                        tooltip: {
+                            callbacks: {
+                                label: (c) => ` ${c.label}: ${formatterPLN(c.parsed)}`
                             }
                         }
                     }

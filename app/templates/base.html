@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pl">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,17 +15,23 @@
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/small-logo.svg') }}">
 
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        body {
+            font-family: 'Inter', sans-serif;
+        }
 
         /* --- POPRAWKA WYSOKOŚCI --- */
         .navbar-custom {
             background-color: var(--top-bg);
             border-bottom: 1px solid var(--panel);
-            padding: 0 1rem;       /* Zmieniono padding pionowy na 0, wysokość kontrolujemy niżej */
-            min-height: 74px;      /* SZTYWNA WYSOKOŚĆ: Zapobiega skakaniu paska */
+            padding: 0 1rem;
+            /* Zmieniono padding pionowy na 0, wysokość kontrolujemy niżej */
+            min-height: 74px;
+            /* SZTYWNA WYSOKOŚĆ: Zapobiega skakaniu paska */
             display: flex;
-            align-items: center;   /* Centrowanie pionowe zawartości */
+            align-items: center;
+            /* Centrowanie pionowe zawartości */
         }
+
         /* -------------------------- */
 
         .navbar-custom .navbar-brand {
@@ -34,6 +41,7 @@
             align-items: center;
             gap: 10px;
         }
+
         .navbar-custom .nav-link {
             color: var(--muted) !important;
             font-weight: 500;
@@ -42,30 +50,33 @@
             padding: 8px 16px !important;
             margin: 0 2px;
         }
+
         .navbar-custom .nav-link:hover {
             color: var(--text) !important;
-            background-color: rgba(255,255,255,0.05);
+            background-color: rgba(255, 255, 255, 0.05);
         }
+
         .navbar-custom .nav-link.active {
             color: #fff !important;
             background-color: var(--secondary);
         }
+
         .navbar-toggler {
             border-color: var(--secondary);
         }
+
         .navbar-toggler-icon {
             filter: invert(1);
         }
     </style>
 </head>
+
 <body>
 
     <nav class="navbar navbar-expand-lg navbar-custom sticky-top">
         <div class="container-xl">
             <a class="navbar-brand" href="{{ url_for('main.index') }}">
-                <img src="{{ url_for('static', filename='images/small-logo.svg') }}"
-                     alt="Logo" width="32" height="32"
-                     style="background: linear-gradient(45deg, #7c9cff, #4cc38a); border-radius: 8px; padding: 4px;">
+                <img src="{{ url_for('static', filename='images/small-logo.svg') }}" alt="Logo" width="48" height="48">
                 <span>{% block nav_title %}FinApp{% endblock %}</span>
             </a>
 
@@ -79,44 +90,44 @@
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     <li class="nav-item">
                         <a class="nav-link {{ 'active' if request.endpoint == 'main.index' }}"
-                           href="{{ url_for('main.index') }}">Główna</a>
+                            href="{{ url_for('main.index') }}">Główna</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {{ 'active' if 'portfolio' in request.endpoint }}"
-                           href="{{ url_for('portfolio.portfolio') }}">Portfolio</a>
+                            href="{{ url_for('portfolio.portfolio') }}">Portfolio</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {{ 'active' if 'statistics' in request.endpoint }}"
-                           href="{{ url_for('statistics.statistics') }}">Statystyki</a>
+                            href="{{ url_for('statistics.statistics') }}">Statystyki</a>
                     </li>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {{ 'active' if 'settings' in request.endpoint }}"
-                           href="{{ url_for('settings.settings') }}">Ustawienia</a>
+                            href="{{ url_for('settings.settings') }}">Ustawienia</a>
                     </li>
                 </ul>
                 {% endif %}
 
                 <div class="d-flex align-items-center gap-3 ms-auto">
                     {% if current_user and current_user.is_authenticated %}
-                        <div class="d-none d-lg-block text-end" style="line-height: 1.2;">
-                            <small style="color: var(--muted); display: block; font-size: 0.75rem;">Zalogowany jako</small>
-                            <span style="color: var(--text); font-size: 0.9rem;">{{ current_user.email }}</span>
-                        </div>
-                        <a class="btn btn-outline-light btn-sm" href="{{ url_for('auth.logout') }}">Wyloguj</a>
+                    <div class="d-none d-lg-block text-end" style="line-height: 1.2;">
+                        <small style="color: var(--muted); display: block; font-size: 0.75rem;">Zalogowany jako</small>
+                        <span style="color: var(--text); font-size: 0.9rem;">{{ current_user.email }}</span>
+                    </div>
+                    <a class="btn btn-outline-light btn-sm" href="{{ url_for('auth.logout') }}">Wyloguj</a>
                     {% else %}
-                        <div class="d-flex gap-2">
+                    <div class="d-flex gap-2">
 
-                             {% if request.endpoint == 'auth.login' %}
-                                <a class="btn btn-outline-light btn-sm" href="{{ url_for('auth.register') }}">Rejestracja</a>
+                        {% if request.endpoint == 'auth.login' %}
+                        <a class="btn btn-outline-light btn-sm" href="{{ url_for('auth.register') }}">Rejestracja</a>
 
-                             {% elif request.endpoint == 'auth.register' %}
-                                <a class="btn btn-outline-light btn-sm" href="{{ url_for('auth.login') }}">Logowanie</a>
+                        {% elif request.endpoint == 'auth.register' %}
+                        <a class="btn btn-outline-light btn-sm" href="{{ url_for('auth.login') }}">Logowanie</a>
 
-                             {% else %}
-                                <a class="btn btn-outline-light btn-sm" href="{{ url_for('auth.login') }}">Zaloguj się</a>
-                             {% endif %}
-                        </div>
+                        {% else %}
+                        <a class="btn btn-outline-light btn-sm" href="{{ url_for('auth.login') }}">Zaloguj się</a>
+                        {% endif %}
+                    </div>
                     {% endif %}
                 </div>
             </div>
@@ -138,4 +149,5 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
+
 </html>

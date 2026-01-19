@@ -33,9 +33,21 @@
 </div>
 {% endif %}
 
+<!-- Allocation Pie Chart Section -->
+{% if allocation_data and allocation_data.labels %}
+<div class="mt-5" style="max-width: 1000px; margin: 0 auto;">
+    <h3 class="h5 mb-3">Struktura portfela (wg typu)</h3>
+    <div style="position: relative; height: 360px;">
+        <canvas id="allocationChart"></canvas>
+    </div>
+</div>
+{% endif %}
+
 <!-- Data Injection -->
 <script id="ts-data" type="application/json">{{ timeseries | tojson }}</script>
+<script id="allocation-data" type="application/json">{{ allocation_data | default({}) | tojson }}</script>
 <script id="inflation-data" type="application/json">{{ inflation_data | default({}) | tojson }}</script>
 
-<script src="{{ url_for('static', filename='js/analysis.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/analysis.js') }}?v=2"></script>
 {% endblock %}

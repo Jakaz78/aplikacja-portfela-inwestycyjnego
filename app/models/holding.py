@@ -28,9 +28,9 @@ class Holding(db.Model):
     # ale można je tu zadeklarować explicit jeśli wolisz)
 
     __table_args__ = (
-        # ZMIANA KLUCZOWA: Unikalność na poziomie Portfel + Obligacja
-        # To zapobiega dublowaniu się tej samej obligacji w tabeli
-        db.UniqueConstraint('portfolio_id', 'bond_definition_id', name='uq_holding_portfolio_bond'),
+        # USUNIĘTO UniqueConstraint aby pozwolić na wiele "partii" (lots) tej samej obligacji
+        # np. kupionych w różnych datach lub cenach.
+        # db.UniqueConstraint('portfolio_id', 'bond_definition_id', name='uq_holding_portfolio_bond'),
     )
 
     def __repr__(self):

@@ -4,7 +4,7 @@ from flask_login import login_required, current_user
 from . import bp
 from ...services.portfolio_service import PortfolioService
 from ...services.csv_service import CsvService
-from ...services.charts_service import build_current_value_timeseries
+from ...services.charts_service import build_current_value_timeseries, build_allocation_pie_data
 from ...services.inflation_service import fetch_poland_cpi_yoy, align_series_to_common_months
 from ...models.bond import Bond
 from ...models.holding import Holding
@@ -35,6 +35,9 @@ def portfolio_analysis():
     # Początkowe dane (domyślnie 'D')
     df = PortfolioService.get_user_portfolio_df(current_user.id)
     timeseries = build_current_value_timeseries(df, freq='D')
+    
+    # Wykres kołowy (Alokacja wg typu obligacji)
+    allocation_data = build_allocation_pie_data(df, group_by_candidates=['bond_type', 'Typ_Obligacji'], value_column='current_value')
 
     # Inflacja
     inflation_data = {}
@@ -43,10 +46,6 @@ def portfolio_analysis():
         cpi = fetch_poland_cpi_yoy(start='2020-01-01')
         
         # Przygotuj DataFrame z wartościami portfela do formatu oczekiwanego przez align
-        # build_current_value_timeseries zwraca dict list, musimy to zamienić z powrotem na DF lub użyć surowego DF
-        # Lepiej użyć surowego DF (transakcje/holdings) i przeliczyć total value na każdy dzień
-        # Ale uprośćmy: weźmy timeseries 'D' i zamieńmy na DF
-        
         if timeseries['labels']:
             ts_df = pd.DataFrame({
                 'date': timeseries['labels'],
@@ -60,7 +59,7 @@ def portfolio_analysis():
                     'cpi_yoy': comparison['cpi_yoy'].round(2).tolist()
                 }
 
-    return render_template("portfolio_analysis.html", timeseries=timeseries, inflation_data=inflation_data)
+    return render_template("portfolio_analysis.html", timeseries=timeseries, allocation_data=allocation_data, inflation_data=inflation_data)
 
 
 @bp.get("/chart-data")
