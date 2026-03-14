@@ -15,10 +15,9 @@
         </div>
     {% else %}
 
-        <div class="row g-4">
-
+        <div class="row g-4 mb-4">
             <div class="col-md-12">
-                <div class="card text-white bg-primary mb-3" style="background: linear-gradient(45deg, #23304b, #1b2431); border: 1px solid var(--secondary);">
+                <div class="card text-white bg-primary" style="background: linear-gradient(45deg, #23304b, #1b2431); border: 1px solid var(--secondary);">
                     <div class="card-body text-center py-4">
                         <h5 class="card-title opacity-75 text-uppercase" style="font-size: 0.9rem; letter-spacing: 1px;">Łączna wartość portfela</h5>
                         <p class="display-4 fw-bold mb-0" style="color: #4cc38a;">
@@ -27,11 +26,14 @@
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div class="col-md-6 mx-auto">
-                <div class="card h-100">
-                    <div class="card-header">
-                        Struktura portfela (wg typu)
+        <div class="row g-4">
+
+            <div class="col-md-6">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-header bg-transparent border-bottom-0 fw-bold">
+                        Struktura portfela (Serie/Typy)
                     </div>
                     <div class="card-body d-flex justify-content-center align-items-center" style="min-height: 350px;">
                         <canvas id="allocationChart"></canvas>
@@ -39,12 +41,91 @@
                 </div>
             </div>
 
+            <div class="col-md-6">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-header bg-transparent border-bottom-0 fw-bold">
+                        Rynek (Skarbowe vs Korporacyjne)
+                    </div>
+                    <div class="card-body d-flex justify-content-center align-items-center" style="min-height: 350px;">
+                        <canvas id="marketChart"></canvas>
+                    </div>
+                </div>
             </div>
+
+        </div>
+
+        <script id="allocation-data" type="application/json">{{ pie_data | default({}) | tojson }}</script>
+
+        <script id="market-data" type="application/json">{{ market_data | default({}) | tojson }}</script>
 
     {% endif %}
 
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script src="{{ url_for('static', filename='js/analysis.js') }}"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Sprawdzamy czy element istnieje, żeby uniknąć błędów
+        const marketCanvas = document.getElementById('marketChart');
+        if (!marketCanvas) return;
+
+        // Pobranie danych
+        const rawData = document.getElementById('market-data').textContent;
+        let data = { labels: [], values: [] };
+        try { data = JSON.parse(rawData); } catch(e) {}
+
+        if (data.labels && data.labels.length > 0) {
+            const ctx = marketCanvas.getContext('2d');
+            new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        data: data.values,
+                        backgroundColor: [
+                            '#4cc38a', // Zielony (Skarbowe)
+                            '#8fa2ff', // Niebieski (Korporacyjne)
+                            '#ffc107', // Żółty
+                            '#dc3545'  // Czerwony
+                        ],
+                        borderWidth: 1,
+                        borderColor: '#141922' // Kolor tła panelu, żeby zrobić ładne odstępy
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#a7b4c5', padding: 20 }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(20, 25, 34, 0.9)',
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    let value = context.parsed || 0;
+                                    let total = context.chart._metasets[context.datasetIndex].total;
+                                    let percentage = ((value / total) * 100).toFixed(1) + '%';
+
+                                    let formattedValue = new Intl.NumberFormat('pl-PL', {
+                                        style: 'currency',
+                                        currency: 'PLN'
+                                    }).format(value);
+
+                                    return ` ${label}: ${formattedValue} (${percentage})`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    });
+</script>
 
 {% endblock %}
